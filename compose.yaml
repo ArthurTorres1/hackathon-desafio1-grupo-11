@@ -1,0 +1,44 @@
+name: foresttrace
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-foresttrace}
+      POSTGRES_USER: ${POSTGRES_USER:-foresttrace_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-foresttrace_dev_owner}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-foresttrace_dev_app}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ./infra/postgres/initialize.sh:/docker-entrypoint-initdb.d/20-foresttrace.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+  app:
+    profiles: ["app"]
+    build: .
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://foresttrace_app:${POSTGRES_APP_PASSWORD:-foresttrace_dev_app}@db:5432/${POSTGRES_DB:-foresttrace}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-foresttrace_owner}:${POSTGRES_PASSWORD:-foresttrace_dev_owner}@db:5432/${POSTGRES_DB:-foresttrace}
+      HOST: 0.0.0.0
+      PORT: 3000
+      DEMO_MODE: ${DEMO_MODE:-true}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      PRIVATE_STORAGE_DIR: /app/data/private
+      WHISP_API_KEY: ${WHISP_API_KEY:-}
+      WHISP_SUBMIT_URL: ${WHISP_SUBMIT_URL:-}
+      WHISP_CONTRACT_CONFIRMED: ${WHISP_CONTRACT_CONFIRMED:-false}
+    volumes:
+      - documents:/app/data/private
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  database:
+  documents:

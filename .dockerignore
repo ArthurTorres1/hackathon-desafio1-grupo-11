@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.agents
+.env
+.env.*
+!.env.example
+data/private
+data/backups
+playwright-report
+test-results
+.npm-cache

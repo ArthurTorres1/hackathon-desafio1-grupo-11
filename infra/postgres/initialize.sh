@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -v ON_ERROR_STOP=1 -v app_password="$POSTGRES_APP_PASSWORD" <<'SQL'
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE ROLE foresttrace_app LOGIN PASSWORD :'app_password';
+GRANT USAGE ON SCHEMA public TO foresttrace_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO foresttrace_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO foresttrace_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO foresttrace_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO foresttrace_app;
+CREATE DATABASE foresttrace_test;
+SQL
+psql --username "$POSTGRES_USER" --dbname foresttrace_test -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION IF NOT EXISTS postgis;'

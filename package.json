@@ -1,0 +1,35 @@
+{
+  "name": "foresttrace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12.0", "npm": ">=10" },
+  "packageManager": "npm@11.9.0",
+  "workspaces": ["packages/contracts", "apps/api", "apps/web"],
+  "scripts": {
+    "build": "npm run build -w @foresttrace/contracts && npm run build -w @foresttrace/api && npm run build -w @foresttrace/web",
+    "typecheck": "npm run build -w @foresttrace/contracts && npm run typecheck --workspaces --if-present",
+    "predev": "npm run build -w @foresttrace/contracts",
+    "dev": "concurrently -k -n contracts,api,web \"npm run dev -w @foresttrace/contracts\" \"npm run dev -w @foresttrace/api\" \"npm run dev -w @foresttrace/web\"",
+    "start": "npm run start -w @foresttrace/api",
+    "db:generate": "tsx scripts/database.ts generate",
+    "db:migrate": "tsx scripts/database.ts migrate",
+    "db:prepare-test": "tsx scripts/database.ts prepare-test",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "verify:chain": "tsx scripts/verify-audit-chain.ts",
+    "backup:demo": "tsx scripts/backup-demo.ts",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^22.19.0",
+    "concurrently": "^9.2.1",
+    "dotenv": "^16.6.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

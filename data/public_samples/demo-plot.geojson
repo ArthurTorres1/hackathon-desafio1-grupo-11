@@ -1,0 +1,6 @@
+{
+  "type": "Feature",
+  "properties": {"label": "POLÍGONO NUMÉRICO SINTÉTICO", "source": "Geometria criada para teste, sem fonte geográfica externa", "license": "Não aplicável: dado sintético", "reference_area_ha_estimate": 122.93, "reference_area_method": "aproximação WGS84 por lados médios; não é saída de PostGIS"},
+  "geometry": {"type": "Polygon", "coordinates": [[[-60.0,-3.0],[-59.99,-3.0],[-59.99,-2.99],[-60.0,-2.99],[-60.0,-3.0]]]},
+  "note": "Não representa propriedade, autorização, parcela real ou situação ambiental."
+}

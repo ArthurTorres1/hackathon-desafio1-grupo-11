@@ -1,0 +1,17 @@
+{
+  "scenario": "C",
+  "label": "DADOS SIMULADOS",
+  "assessment_scope": "DEMONSTRATIVO",
+  "created_at": "2026-11-05T12:00:00Z",
+  "harvests": [
+    {"origin_lot_id": "LOTE-A-DEMO", "start_date": "2026-10-10", "end_date": "2026-10-10", "volume_m3": "1.800000", "data_provenance": "SIMULADA"},
+    {"origin_lot_id": "LOTE-B-DEMO", "start_date": "2026-10-10", "end_date": "2026-10-10", "volume_m3": "1.200000", "data_provenance": "SIMULADA"}
+  ],
+  "shipments": [{"created_at": "2026-10-11T09:00:00Z", "dispatched_at": "2026-10-11T10:00:00Z", "received_at": "2026-10-12T14:00:00Z", "volume_dispatched_m3": "3.000000", "volume_received_m3": "3.000000", "route_states": ["AM", "SP"], "recipient_confirmation": "DECLARADA_SIMULADA"}],
+  "output": {"code": "PROD-C-DEMO", "volume_m3": "3.000000", "allocations": [
+    {"origin_lot_id": "LOTE-A-DEMO", "volume_m3": "1.800000", "fraction": "0.6"},
+    {"origin_lot_id": "LOTE-B-DEMO", "volume_m3": "1.200000", "fraction": "0.4"}
+  ]},
+  "species": {"common_name": "angelim-vermelho", "scientific_name": "Dinizia excelsa", "verification": "PENDENTE_DE_VERIFICACAO"},
+  "note": "As atribuições medem declarações de origem; não comprovam mistura física."
+}

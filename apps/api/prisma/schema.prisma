@@ -1,0 +1,521 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  role String
+  country String @default("BR")
+  state String
+  municipality String
+  data_provenance Json
+  created_at DateTime @default(now())
+  users User[]
+  @@map("organizations")
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  organization_id String @db.Uuid
+  organization Organization @relation(fields: [organization_id], references: [id])
+  roles String[]
+  sessions Session[]
+  @@map("users")
+}
+
+model Membership {
+  id String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+  organization_id String @db.Uuid
+  role String
+  @@unique([user_id, organization_id, role])
+  @@map("memberships")
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  token_hash String @unique
+  csrf_hash String
+  user_id String @db.Uuid
+  user User @relation(fields: [user_id], references: [id])
+  expires_at DateTime
+  @@map("sessions")
+}
+
+model Plot {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  country String @default("BR")
+  state String
+  municipality String
+  declared_property String
+  geometry Json
+  geometry_hash String
+  geometry_version Int @default(1)
+  geometry_date DateTime @db.Date
+  area_ha Decimal @db.Decimal(20, 6)
+  geoid String?
+  data_provenance Json
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  lots OriginLot[]
+  @@map("plots")
+}
+
+model OriginLot {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique
+  organization_id String @db.Uuid
+  plot_id String @db.Uuid
+  plot Plot @relation(fields: [plot_id], references: [id])
+  species_common String
+  species_scientific String
+  authorized_volume_m3 Decimal @db.Decimal(20, 6)
+  harvested_volume_m3 Decimal @default(0) @db.Decimal(20, 6)
+  valid_from DateTime @db.Date
+  valid_until DateTime @db.Date
+  right_of_use String
+  data_provenance Json
+  assessment_scope String @default("DEMONSTRATIVO")
+  created_by_user_id String @db.Uuid
+  version Int @default(1)
+  created_at DateTime @default(now())
+  permits Permit[]
+  @@map("origin_lots")
+}
+
+model Permit {
+  id String @id @default(uuid()) @db.Uuid
+  origin_lot_id String @db.Uuid
+  lot OriginLot @relation(fields: [origin_lot_id], references: [id])
+  reference String
+  issuing_authority String
+  official_system String
+  document_id String @db.Uuid
+  valid_from DateTime @db.Date
+  valid_until DateTime @db.Date
+  volume_m3 Decimal @db.Decimal(20, 6)
+  data_provenance Json
+  @@map("permits")
+}
+
+model Document {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  type String
+  name String
+  storage_key String @unique
+  content_hash String
+  fiscal_key String? @unique
+  content_type String
+  data_provenance String
+  source String
+  visibility String @default("PRIVATE")
+  allowed_organization_ids String[]
+  version Int @default(1)
+  supersedes_id String? @db.Uuid
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  @@map("documents")
+}
+
+model Harvest {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  origin_lot_id String @db.Uuid
+  species String
+  volume_m3 Decimal @db.Decimal(20, 6)
+  period_start DateTime @db.Date
+  period_end DateTime @db.Date
+  tag String
+  document_ids String[]
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  @@map("harvests")
+}
+
+model Balance {
+  id String @id @default(uuid()) @db.Uuid
+  lot_id String @db.Uuid
+  organization_id String @db.Uuid
+  available_m3 Decimal @default(0) @db.Decimal(20, 6)
+  reserved_m3 Decimal @default(0) @db.Decimal(20, 6)
+  quarantined_m3 Decimal @default(0) @db.Decimal(20, 6)
+  @@unique([lot_id, organization_id])
+  @@map("balances")
+}
+
+model BalanceMovement {
+  id String @id @default(uuid()) @db.Uuid
+  lot_id String @db.Uuid
+  organization_id String @db.Uuid
+  entity_type String
+  entity_id String @db.Uuid
+  action String
+  volume_m3 Decimal @db.Decimal(20, 6)
+  created_at DateTime @default(now())
+  @@map("balance_movements")
+}
+
+model Shipment {
+  id String @id @default(uuid()) @db.Uuid
+  sender_id String @db.Uuid
+  recipient_id String @db.Uuid
+  carrier String
+  origin_state String
+  destination_state String
+  route_states String[]
+  official_system String
+  document_ids String[]
+  status String @default("CREATED")
+  declared_at DateTime
+  dispatched_at DateTime?
+  received_at DateTime?
+  dispatched_by_user_id String? @db.Uuid
+  received_by_user_id String? @db.Uuid
+  created_by_user_id String @db.Uuid
+  items ShipmentItem[]
+  created_at DateTime @default(now())
+  @@map("shipments")
+}
+
+model ShipmentItem {
+  id String @id @default(uuid()) @db.Uuid
+  shipment_id String @db.Uuid
+  shipment Shipment @relation(fields: [shipment_id], references: [id])
+  lot_id String @db.Uuid
+  volume_m3 Decimal @db.Decimal(20, 6)
+  received_volume_m3 Decimal? @db.Decimal(20, 6)
+  @@map("shipment_items")
+}
+
+model Transformation {
+  id String @id @default(uuid()) @db.Uuid
+  code String
+  organization_id String @db.Uuid
+  occurred_at DateTime
+  conversion_parameter_id String @db.Uuid
+  residue_m3 Decimal @db.Decimal(20, 6)
+  loss_m3 Decimal @db.Decimal(20, 6)
+  assessment_scope String
+  created_by_user_id String @db.Uuid
+  version Int @default(1)
+  inputs TransformationInput[]
+  outputs ProductLot[]
+  created_at DateTime @default(now())
+  @@map("transformations")
+}
+
+model TransformationInput {
+  id String @id @default(uuid()) @db.Uuid
+  transformation_id String @db.Uuid
+  transformation Transformation @relation(fields: [transformation_id], references: [id])
+  lot_id String @db.Uuid
+  volume_m3 Decimal @db.Decimal(20, 6)
+  @@map("transformation_inputs")
+}
+
+model ProductLot {
+  id String @id @default(uuid()) @db.Uuid
+  code String @unique
+  organization_id String @db.Uuid
+  transformation_id String @db.Uuid
+  transformation Transformation @relation(fields: [transformation_id], references: [id])
+  product String
+  species_common String
+  species_scientific String
+  volume_m3 Decimal @db.Decimal(20, 6)
+  assessment_scope String
+  data_provenance Json
+  created_by_user_id String @db.Uuid
+  version Int @default(1)
+  created_at DateTime @default(now())
+  @@map("product_lots")
+}
+
+model LotProvenance {
+  id String @id @default(uuid()) @db.Uuid
+  product_lot_id String @db.Uuid
+  origin_lot_id String? @db.Uuid
+  input_lot_id String? @db.Uuid
+  volume_m3 Decimal @db.Decimal(20, 6)
+  fraction Decimal @db.Decimal(24, 18)
+  @@map("lot_provenance")
+}
+
+model ConversionParameter {
+  id String @id @default(uuid()) @db.Uuid
+  input_product String
+  output_product String
+  coefficient Decimal @db.Decimal(12, 9)
+  regulation_reference String
+  source_url String
+  version String
+  valid_from DateTime @db.Date
+  valid_until DateTime? @db.Date
+  data_provenance String
+  @@map("conversion_parameters")
+}
+
+model ConversionException {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  conversion_parameter_id String @db.Uuid
+  document_id String @db.Uuid
+  coefficient Decimal @db.Decimal(12, 9)
+  issuing_authority String
+  approval_reference String
+  valid_from DateTime @db.Date
+  valid_until DateTime @db.Date
+  data_provenance String
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  @@map("conversion_exceptions")
+}
+
+model Check {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  entity_type String
+  entity_id String @db.Uuid
+  rule_id String
+  rule_version String
+  name String
+  description String
+  regulation_reference String?
+  source Json
+  modality String
+  dimension String
+  status String
+  technical_severity String
+  message String
+  suggested_action String
+  values Json
+  assessment_scope String
+  created_at DateTime @default(now())
+  @@index([entity_id])
+  @@map("checks")
+}
+
+model AuditCase {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  check_id String @db.Uuid
+  entity_type String
+  entity_id String @db.Uuid
+  created_by_user_id String? @db.Uuid
+  rule_id String
+  status String @default("ABERTO")
+  opened_at DateTime @default(now())
+  decisions AuditDecision[]
+  @@map("audit_cases")
+}
+
+model AuditDecision {
+  id String @id @default(uuid()) @db.Uuid
+  case_id String @db.Uuid
+  audit_case AuditCase @relation(fields: [case_id], references: [id])
+  reviewer_user_id String @db.Uuid
+  decision String
+  comment String
+  evidence_ids String[]
+  conversion_exception_id String? @db.Uuid
+  created_at DateTime @default(now())
+  @@map("audit_decisions")
+}
+
+model PendingOperationRequest {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  operation String
+  payload Json
+  payload_hash String
+  status String @default("PENDENTE")
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  @@map("pending_operation_requests")
+}
+
+model Sale {
+  id String @id @default(uuid()) @db.Uuid
+  seller_id String @db.Uuid
+  buyer_id String @db.Uuid
+  product_lot_id String @db.Uuid
+  volume_m3 Decimal @db.Decimal(20, 6)
+  document_id String @db.Uuid
+  status String
+  occurred_at DateTime
+  pending_acknowledged Boolean @default(false)
+  created_by_user_id String @db.Uuid
+  @@map("sales")
+}
+
+model CustodyEvent {
+  event_id String @id @db.Uuid
+  stream_id String @db.Uuid
+  sequence Int
+  entity_type String
+  entity_id String @db.Uuid
+  type String
+  actor_id String @db.Uuid
+  timestamp DateTime
+  payload Json
+  previous_hash String?
+  event_hash String
+  @@unique([stream_id, sequence])
+  @@map("custody_events")
+}
+
+model StreamHead {
+  stream_id String @id @db.Uuid
+  sequence Int @default(0)
+  event_hash String?
+  @@map("stream_heads")
+}
+
+model Passport {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  product_lot_id String @db.Uuid
+  public_token String @unique
+  version Int
+  content Json
+  content_hash String
+  snapshot_heads Json
+  assessment_scope String
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  @@map("passports")
+}
+
+model EvidenceBundle {
+  id String @id @default(uuid()) @db.Uuid
+  passport_id String @db.Uuid
+  user_id String @db.Uuid
+  format String
+  duration_ms Int
+  state String
+  generated_at DateTime @default(now())
+  @@map("evidence_bundles")
+}
+
+model IdempotencyKey {
+  id String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+  operation String
+  key String
+  payload_hash String
+  response Json
+  status_code Int
+  created_at DateTime @default(now())
+  @@unique([user_id, operation, key])
+  @@map("idempotency_keys")
+}
+
+model AccessLog {
+  id String @id @default(uuid()) @db.Uuid
+  user_id String? @db.Uuid
+  action String
+  entity_id String?
+  allowed Boolean
+  reason String
+  request_id String
+  created_at DateTime @default(now())
+  @@map("access_logs")
+}
+
+model Source {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  owner String
+  url String
+  access_mode String
+  requires_auth Boolean
+  spatial_coverage String
+  time_coverage String
+  update_frequency String
+  license String
+  fields_used String[]
+  integration_status String
+  confidence String
+  limitations String
+  checked_at DateTime
+  @@map("sources")
+}
+
+model SourceQuery {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  lot_id String @db.Uuid
+  source_id String @db.Uuid
+  geometry_hash String
+  payload Json
+  result Json
+  payload_hash String
+  result_hash String
+  status String
+  http_status Int?
+  provider_version String
+  assessment_scope String
+  data_provenance String
+  failure_reason String?
+  job_id String?
+  created_at DateTime @default(now())
+  @@map("source_queries")
+}
+
+model RegulatoryRequirement {
+  id String @id @default(uuid()) @db.Uuid
+  jurisdiction String
+  phase String
+  product String
+  modality String
+  official_system String
+  source_url String
+  article String
+  version String
+  valid_from DateTime @db.Date
+  valid_until DateTime? @db.Date
+  coverage String
+  required_evidence Json
+  resolution_criteria String
+  checked_at DateTime
+  checked_by String
+  @@map("regulatory_requirements")
+}
+
+model RegulatoryAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  entity_type String
+  entity_id String @db.Uuid
+  coverage String
+  requirements Json
+  gaps Json
+  version Int
+  created_at DateTime @default(now())
+  @@map("regulatory_assessments")
+}
+
+model Correction {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  entity_type String
+  entity_id String @db.Uuid
+  previous_version Int
+  new_version Int
+  previous_data Json
+  corrected_data Json
+  reason String
+  created_by_user_id String @db.Uuid
+  created_at DateTime @default(now())
+  @@map("corrections")
+}
