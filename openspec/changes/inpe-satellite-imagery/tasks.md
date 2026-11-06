@@ -2,8 +2,8 @@
 
 ## 1. Prova técnica delimitada do INPE
 
-- [ ] 1.1 Consultar catálogo e busca STAC com o polígono sintético, confirmar uma coleção óptica, item e bandas RGB e registrar requisição sanitizada, HTTP, período, licença e hosts em `docs/inpe-integration.md`; verificar resultado real sem confundir contexto sintético com origem comprovada.
-- [ ] 1.2 Validar acesso às bandas, HTTP Range, CRS, nodata, escala e biblioteca Node para leitura/reprojeção; produzir recorte PNG em EPSG:3857 de até 1024 x 1024 e bounds WGS84, verificando três pontos de controle com erro máximo de um pixel de saída e leitura dentro de 32 MB, sem download integral como fallback.
+- [x] 1.1 Consultar catálogo e busca STAC com o polígono sintético, confirmar uma coleção óptica, item e bandas RGB e registrar requisição sanitizada, HTTP, período, licença e hosts em `docs/inpe-integration.md`; verificar resultado real sem confundir contexto sintético com origem comprovada.
+- [x] 1.2 Validar acesso às bandas, HTTP Range, CRS, nodata, escala e biblioteca Node para leitura/reprojeção; produzir recorte PNG em EPSG:3857 de até 1024 x 1024 e bounds WGS84, verificando três pontos de controle com erro máximo de um pixel de saída e leitura dentro de 32 MB, sem download integral como fallback.
 - [ ] 1.3 Registrar versão das dependências escolhidas, configuração da coleção e evidência de tempo/memória no guia; verificar instalação/build no ambiente Windows e na imagem da aplicação antes de prosseguir. Se a prova falhar, registrar o impedimento e revisar o design antes de trocar a arquitetura ou declarar a integração pronta.
 
 ## 2. Contratos e persistência privada
