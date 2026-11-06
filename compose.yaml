@@ -35,6 +35,7 @@ services:
       WHISP_SUBMIT_URL: ${WHISP_SUBMIT_URL:-}
       WHISP_POLL_URL_TEMPLATE: ${WHISP_POLL_URL_TEMPLATE:-}
       WHISP_CONTRACT_CONFIRMED: ${WHISP_CONTRACT_CONFIRMED:-false}
+      INPE_IMAGERY_ENABLED: ${INPE_IMAGERY_ENABLED:-false}
     volumes:
       - ./data/private:/app/data/private
     depends_on:

@@ -1,5 +1,7 @@
 # Evidência da prova técnica INPE
 
+As seções iniciais preservam o histórico das provas 1.1–1.3. Pendências descritas nelas foram resolvidas pela implementação e pelas verificações registradas em “Integração privada ponta a ponta” ao fim deste guia.
+
 Consulta executada em 06/11/2026 contra o catálogo STAC do Brazil Data Cube, usando a geometria sintética existente em `data/public_samples/demo-plot.geojson`. O arquivo não foi editado. A geometria é um retângulo entre longitude -60 e -59.99 e latitude -3 e -2.99; seus metadados declaram explicitamente que não representa propriedade ou origem real.
 
 ## Busca observada
@@ -65,8 +67,33 @@ A checagem estática TypeScript do probe passou com `tsc --noEmit --target ES202
 
 ## Estado do ambiente para a tarefa 1.3
 
-Conforme inspeção registrada pelo agente principal: não foram encontrados Docker/Podman nem serviços disponíveis, `wsl.exe --status` indica WSL não instalado, `psql`/`pg_isready` não estão disponíveis e as portas 5432/5433 estão fechadas; há apenas `.env.example`. O host observado é Node 24.18/npm 11.16 e o `Dockerfile` declara `node:22-bookworm-slim`. A imagem de aplicação não pode ser validada neste ambiente sem container runtime. Portanto, a tarefa 1.3 permanece bloqueada/em aberto e não está marcada como concluída.
+Na verificação posterior de 06/11/2026, o host Windows executou instalação limpa pelo lockfile (`npm.cmd ci`: 320 pacotes instalados, 330 auditados), geração do cliente Prisma (`npm.cmd run db:generate`) e a prova externa novamente. A instalação anterior do host não correspondia ao lockfile: faltavam geotiff/proj4 e a resolução de pngjs encontrava a versão transitiva 5.0.0. A instalação limpa corrigiu essa diferença sem mudar as versões fixadas.
 
-Dependências instaladas e fixadas no workspace da API: `geotiff@3.0.5`, `proj4@2.22.0`, `pngjs@7.0.0` e tipos `@types/pngjs@6.0.5`. As bibliotecas de runtime declaram licença MIT; isso não altera a licença das imagens do provedor. Há uma versão transitiva distinta de `pngjs` na raiz por causa do QR: o probe deve resolver explicitamente a versão do workspace da API.
+`npm.cmd ls geotiff proj4 pngjs --workspace @foresttrace/api` confirmou `geotiff@3.0.5`, `proj4@2.22.0` e `pngjs@7.0.0` da API, além de `pngjs@5.0.0` transitivo do QR. Os tipos permanecem `@types/pngjs@6.0.5`. Todas as bibliotecas do probe agora são resolvidas a partir de `apps/api/package.json` com `createRequire`, inclusive a importação dinâmica do geotiff; a resolução funciona tanto com dependências aninhadas como com hoisting. As bibliotecas de runtime declaram MIT; isso não altera a licença das imagens.
 
-`npm.cmd install` e `npm.cmd run build` passaram em Windows com essas dependências, compilando contratos, API e interface. O build precisou ser reexecutado fora da sandbox após `spawn EPERM` do esbuild; essa restrição de execução não foi interpretada como falha do código. Não foi executado build Linux. Na máquina com Docker, executar `docker build -t foresttrace-inpe-proof .` a partir deste mesmo lockfile e registrar o resultado antes de prosseguir além da prova técnica. Não é necessário aplicar migrações para esse build.
+Na repetição autorizada `npm.cmd exec -- tsx scripts/probe-inpe-render.ts`, o ambiente foi Node **22.13.1**, Windows **10.0.26200 x64**. O resultado foi PNG **96×96**, **20359 bytes**, com **9216 pixels cobertos**, grade EPSG:3857 e bounds WGS84. As três bandas RGB consumiram **1279670 bytes** por HTTP Range (206), dentro do teto **33554432 bytes**. O prazo total permaneceu **20000 ms**; a execução terminou em **2633 ms**. RSS inicial **83308544 bytes**, final **98861056 bytes**, delta **15552512 bytes**: essas medidas não representam o pico máximo. Os três pontos de controle tiveram erro máximo **1,3685138805436313×10⁻⁹ pixel**, abaixo do limite de um pixel, medindo concordância dos metadados, sem alegar acurácia de campo.
+
+Artefatos privados da repetição: `data/private/inpe-render-probe.png` e `.json`; o PNG foi inspecionado visualmente. O comando completo ficou em `inpe-gate-probe.log`. Não houve fallback para cena inteira, simulação ou thumbnail. A licença da coleção permanece `proprietary`; a prova não autoriza redistribuição dos pixels. A configuração aprovada é coleção **S2-16D-2**, bandas **B04/B03/B02**, nodata **0**, escala linear **0,0001**, CRS Albers da definição oficial descrita acima e saída EPSG:3857. Suporte de produção a outras coleções não é presumido por esse resultado.
+
+O agente principal concluiu `docker build -t foresttrace-inpe-proof .` no `Dockerfile` da aplicação, com Node 22/Linux, registrando sucesso em `inpe-proof-image.log`. A inspeção `npm ls` dentro da imagem confirmou as mesmas versões de runtime. A instalação/build Linux deixa de estar bloqueada por ausência de runtime: os registros anteriores de Docker indisponível pertencem a outra rodada e não descrevem o ambiente atual. Nenhuma migração é necessária para a prova de build.
+
+O build Windows completo (`npm.cmd run build`) também passou após a geração do Prisma, compilando contratos, API e interface; registro em `inpe-host-build.log`. O primeiro build imediatamente após `npm ci` falhou por ausência do cliente Prisma gerado, corrigida pelo comando previsto no README, sem alteração do código de domínio. A prova técnica satisfaz o gate de dependências e ambientes da tarefa 1.3; ela ainda não implementa as rotas, persistência e overlay de produção.
+## Integração privada ponta a ponta — 06/11/2026
+
+O script `scripts/smoke-inpe.ts` executou a implementação de produção pela API autenticada: busca real com o GeoJSON sintético do repositório, renderização PNG, cadastro, vínculo repetido sem duplicação, reabertura dos metadados e criação de lote associado à mesma parcela. A imagem retornou 75.025 bytes, com a cena `S2-16D_V2_016009_20261016`. O acesso anônimo ao PNG, após preencher o cache autenticado, retornou 401. Artefatos privados: `data/private/inpe-live-smoke.json` e `data/private/inpe-live-smoke.png`. O PNG foi inspecionado visualmente; o alinhamento geográfico é verificado também pelos pontos de controle do renderizador.
+
+O smoke também simulou uma falha de asset com dependência injetada em uma segunda instância da API, sem cache: recebeu 503 e continuou o cadastro e o vínculo na instância normal. Essa etapa é uma simulação explícita de indisponibilidade; a busca e o PNG anteriores usam o provedor real. O teste de navegador `inpe-live.spec.ts` reabriu a cena pela parcela do lote real do smoke; capturas em `data/private/inpe-live-browser.png` e `data/private/inpe-live-browser-full.png` preservam a evidência visual privada.
+
+Para reproduzir, prepare o banco e o seed demonstrativo, defina `INPE_IMAGERY_ENABLED=true` no processo e execute `node_modules/.bin/tsx.cmd scripts/smoke-inpe.ts`. O script cria registros identificados como sintéticos; não apaga os registros existentes. Requer acesso real ao INPE, ao banco local e à persona demonstrativa do entregável. Falha externa faz o script falhar explicitamente. Não substitua essa evidência por execução com mocks.
+
+Consulte [renderizador e transporte](inpe-renderer.md), [API e retenção](inpe-backend.md) e [interface e testes de navegador](inpe-ui.md) para os critérios específicos. Os testes determinísticos de indisponibilidade são separados da consulta real.
+
+### Verificação final e execução local
+
+- `npm.cmd run typecheck`: passou após os ajustes finais.
+- `npm.cmd test`: 192 testes passaram, em 21 arquivos.
+- `npm.cmd run test:integration`: 103 casos verificados. A execução completa final passou 102; o caso INPE foi repetido e passou após a correção de isolamento da idempotência por organização. A execução completa anterior também passou os 103 casos.
+- `npm.cmd run test:e2e -- --workers=1`: 58 testes determinísticos aprovados, seis condicionais ignorados. Casos interrompidos pelo encerramento de um servidor compartilhado foram repetidos em saída isolada e passaram. A prova real INPE foi executada separadamente e passou.
+- `npm.cmd run build`, exportação OpenAPI e build Docker Linux: passaram. A revisão paralela acrescentou limites para o conjunto de blocos TIFF decodificados e para replays após mudança de organização; ambos têm testes específicos aprovados e estão na imagem final.
+
+A imagem final foi recriada em `http://127.0.0.1:3001`, com `INPE_IMAGERY_ENABLED=true` no ambiente local. Verificação autenticada nessa imagem: `/health` OK, capabilities habilitadas e PNG real HTTP 200, `image/png`, 75.025 bytes, `Cache-Control: private, no-store`. `.env.example` continua desabilitado por padrão. Use a persona **Autora entregável**, selecione o lote sintético `INPE-SMOKE-…` em **Origem & sinais**, abra o histórico e escolha **Reabrir cena vinculada**. No cadastro, use **Buscar imagens INPE** após informar o polígono.

@@ -123,12 +123,49 @@ describe.sequential('mistura, revisão e entrega persistidas', () => {
     const transformation = await transform(await inputLots()); const productId = transformation.json().outputs[0].product_lot.id;
     const passportResponse = await post('passports', { product_lot_id: productId, assessment_scope: 'DEMONSTRATIVO' }); expect(passportResponse.statusCode, passportResponse.body).toBe(201);
     const passportId = passportResponse.json().passport.id;
+    // Persisted private imagery must stay outside every passport/export representation.
+    const source = await owner.lotProvenance.findFirstOrThrow({ where: { product_lot_id: productId } });
+    const origin = await owner.originLot.findUniqueOrThrow({ where: { id: source.origin_lot_id! } });
+    const plot = await owner.plot.findUniqueOrThrow({ where: { id: origin.plot_id } });
+    const scene = { scene_key: sha256Canonical('private-scene'), collection_id: 'S2-16D-2', item_id: 'PRIVATE-IMAGERY-TEST', datetime: null, start_datetime: '2026-10-16T00:00:00Z', end_datetime: '2026-10-31T23:59:59Z', footprint: geometry, bbox: [-60,-3,-59.999,-2.999], cloud_cover: null, platform: null, instruments: [], license: null, attribution: 'INPE/BDC', renderable: false, render_bounds: null, render_url: null, preview_url: null, limitations: ['SEM_VISUALIZACAO'] };
+    const privateSnapshot = { private_imagery_marker: randomUUID(), asset_url: 'https://data.inpe.br/private-test-raster.tif', bbox: scene.bbox, scenes: [{ scene, assets: null }] };
+    const query = await owner.imageryQuery.create({ data: {
+      organization_id: organizationId, created_by_user_id: authorId, plot_id: plot.id,
+      geometry, geometry_hash: plot.geometry_hash!, geometry_version: plot.geometry_version,
+      context_provenance: { label: 'SIMULADA' }, filters: { datetime: '2026-10-01/2026-10-31' },
+      request_hash: sha256Canonical(privateSnapshot), adapter_version: 'privacy-test', snapshot: privateSnapshot,
+      snapshot_hash: sha256Canonical(privateSnapshot), status: 'SUCESSO', queried_at: new Date(0), expires_at: new Date(1),
+    } });
+    const state = async () => ({
+      verification: (await app.inject({ url: `/api/v1/passports/${passportId}/verify`, headers: author })).json().current_state,
+      balances: await owner.balance.findMany({ where: { organization_id: organizationId }, orderBy: { id: 'asc' } }),
+      checks: await owner.check.count(), queries: await owner.sourceQuery.count(),
+    });
+    const beforeImagery = await state();
+    const previousFlag = process.env.INPE_IMAGERY_ENABLED;
+    try {
+      process.env.INPE_IMAGERY_ENABLED = 'true';
+      const linked = await post(`plots/${plot.id}/imagery-references`, { query_id: query.id, scene_key: scene.scene_key, geometry_version: plot.geometry_version });
+      expect(linked.statusCode, linked.body).toBe(200);
+    } finally {
+      if (previousFlag === undefined) delete process.env.INPE_IMAGERY_ENABLED;
+      else process.env.INPE_IMAGERY_ENABLED = previousFlag;
+    }
+    expect(await state()).toEqual(beforeImagery);
+    const assertNoPrivateImagery = (body: string) => {
+      expect(body).not.toContain(query.id);
+      expect(body).not.toContain(privateSnapshot.private_imagery_marker);
+      expect(body).not.toContain(privateSnapshot.asset_url);
+      expect(body).not.toMatch(/imagery_references|render_url|PRIVATE-IMAGERY-TEST/);
+    };
     const response = await app.inject({ url: `/api/v1/passports/${passportId}/bundle`, headers: author }); expect(response.statusCode, response.body).toBe(200);
     const bundle = response.json(); expect(bundle.evidence.plots).toHaveLength(2); expect(bundle.evidence.documents[0].storage_key).toBeUndefined();
+    assertNoPrivateImagery(response.body);
     expect(bundle.checklist).toHaveLength(5); expect(bundle.dds_reference_status).toBe('NAO_FORNECIDA'); expect(bundle.duration_ms).toBeGreaterThanOrEqual(0);
     expect(bundle.current_state.readiness_status).toBe('MISSING_EVIDENCE'); expect(bundle.guidance).toContain('cinco anos');
     const html = await app.inject({ url: `/api/v1/passports/${passportId}/bundle?format=HTML`, headers: author });
     expect(html.statusCode).toBe(200); expect(html.headers['content-type']).toContain('text/html'); expect(html.body).toContain('MISSING_EVIDENCE'); expect(html.body).toContain('checklist');
+    assertNoPrivateImagery(html.body);
     const share = await post(`passports/${passportId}/grants`, { organization_id: buyerId }); expect(share.statusCode, share.body).toBe(201);
     const externalUserId = randomUUID();
     await owner.user.create({ data: { id: externalUserId, name: 'Comprador autorizado', organization_id: buyerId, roles: ['BUYER'] } });
@@ -145,5 +182,6 @@ describe.sequential('mistura, revisão e entrega persistidas', () => {
     await owner.lotProvenance.update({ where: { id: allocation.id }, data: { fraction: allocation.fraction } });
     const publicView = await app.inject({ url: `/api/v1/public/passports/${passportResponse.json().passport.public_token}` });
     expect(publicView.body).not.toMatch(/coordinates|storage_key|reviewer_user_id/);
+    assertNoPrivateImagery(publicView.body);
   });
 });

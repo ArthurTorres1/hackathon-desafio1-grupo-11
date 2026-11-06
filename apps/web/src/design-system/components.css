@@ -1,0 +1,35 @@
+/* Referência CSS independente de framework. Não inclui reset global. */
+.ft-app{font:400 var(--ft-text-md)/var(--ft-leading-body) var(--ft-font-body);background:var(--ft-bg);color:var(--ft-ink)}
+.ft-app *{box-sizing:border-box}.ft-app button,.ft-app input,.ft-app select,.ft-app textarea{font:inherit}
+.ft-app :where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid var(--ft-focus);outline-offset:3px}
+.ft-title{font:400 var(--ft-text-3xl)/var(--ft-leading-heading) var(--ft-font-display);letter-spacing:-.025em;margin:0}
+.ft-muted{color:var(--ft-muted)}.ft-mono{font-family:var(--ft-font-mono)}
+.ft-panel{background:var(--ft-surface);border:1px solid var(--ft-border);border-radius:var(--ft-radius-panel);padding:var(--ft-space-6);box-shadow:var(--ft-shadow)}
+.ft-btn{display:inline-flex;gap:var(--ft-space-2);align-items:center;justify-content:center;min-height:var(--ft-control-height);padding:10px 16px;border:1px solid var(--ft-control-border);border-radius:var(--ft-radius-control);color:var(--ft-ink);background:transparent;font-weight:600;cursor:pointer;transition:background var(--ft-duration-fast) var(--ft-ease)}
+.ft-btn:hover{background:var(--ft-surface-hover)}.ft-btn--primary{background:var(--ft-primary);color:var(--ft-on-primary);border-color:var(--ft-primary)}.ft-btn--primary:hover{background:var(--ft-primary-hover);border-color:var(--ft-primary-hover)}
+.ft-btn--secondary{background:var(--ft-secondary-bg);color:var(--ft-secondary-ink);border-color:var(--ft-secondary-border)}.ft-btn--secondary:hover{background:var(--ft-secondary-hover)}
+.ft-btn:disabled{opacity:.55;cursor:not-allowed}.ft-btn[aria-busy="true"]{cursor:progress}
+.ft-field{display:grid;gap:var(--ft-space-2);margin-block:var(--ft-space-4)}.ft-field label{font-size:var(--ft-text-sm);font-weight:600}
+.ft-field :is(input,select,textarea){min-height:44px;width:100%;border:1px solid var(--ft-control-border);background:var(--ft-surface);color:var(--ft-ink);border-radius:var(--ft-radius-control);padding:10px 12px}.ft-field textarea{min-height:112px;resize:vertical}
+.ft-field input::placeholder,.ft-field textarea::placeholder{color:var(--ft-muted)}.ft-field [aria-invalid="true"]{border:2px solid var(--ft-error-border)}.ft-field__hint{font-size:var(--ft-text-sm);color:var(--ft-muted)}.ft-field__error{font-size:var(--ft-text-sm);color:var(--ft-error-ink)}
+.ft-status,.ft-origin{display:inline-flex;align-items:center;gap:6px;font-size:var(--ft-text-xs);font-weight:600;line-height:1.4;padding:4px 8px;border:1px solid var(--ft-control-border);border-radius:var(--ft-radius-tag);background:var(--ft-surface);color:var(--ft-ink);max-width:100%}
+.ft-status--pass,.ft-origin--public{background:var(--ft-success-bg);color:var(--ft-success-ink);border-color:var(--ft-success-border)}
+.ft-status--alert,.ft-status--gap{background:var(--ft-alert-bg);color:var(--ft-alert-ink);border-color:var(--ft-alert-border)}.ft-status--gap{border-inline-start-width:5px}
+.ft-status--pending{background:var(--ft-surface)}.ft-status--none{background:var(--ft-surface-subtle);color:var(--ft-muted)}
+.ft-origin--real{background:var(--ft-primary);color:var(--ft-on-primary);border-color:var(--ft-primary)}.ft-origin--declared{border-style:dashed}
+.ft-origin--simulated{border:1px solid var(--ft-ink);background:repeating-linear-gradient(135deg,var(--ft-hatch-a) 0 5px,var(--ft-hatch-b) 5px 10px)}
+.ft-origin--unavailable{border-style:dotted;color:var(--ft-muted)}.ft-origin--unverified{border-style:dotted;border-color:var(--ft-ink)}
+.ft-sim-banner{padding:12px 16px;background:repeating-linear-gradient(135deg,var(--ft-hatch-a) 0 5px,var(--ft-hatch-b) 5px 10px);border:1px solid var(--ft-ink);border-radius:var(--ft-radius-control)}.ft-sim-banner>span{background:var(--ft-surface);padding:3px 6px}
+.ft-panel--ai{background:var(--ft-surface-subtle);border-inline-start:3px solid var(--ft-secondary-border)}
+.ft-feature{background:var(--ft-feature-bg);color:var(--ft-feature-ink);border-color:var(--ft-feature-border)}.ft-feature p{color:var(--ft-feature-muted)}.ft-feature strong{color:var(--ft-accent)}
+.ft-tabs{display:flex;border-bottom:1px solid var(--ft-border);gap:8px}.ft-tabs [role="tab"]{min-height:44px;padding:10px 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--ft-muted);cursor:pointer}.ft-tabs [aria-selected="true"]{color:var(--ft-ink);border-bottom-color:var(--ft-secondary-border);font-weight:600}
+.ft-table-wrap{overflow-x:auto}.ft-table{width:100%;border-collapse:collapse;text-align:left;font-size:var(--ft-text-sm)}.ft-table :is(th,td){padding:12px 16px;border-bottom:1px solid var(--ft-border)}.ft-table th{color:var(--ft-muted);background:var(--ft-surface-subtle);font-weight:500}.ft-table tr[aria-selected="true"]{background:var(--ft-surface-subtle)}.ft-table tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 var(--ft-secondary-border)}
+.ft-dialog{width:min(580px,calc(100% - 32px));max-height:85dvh;padding:24px;border:1px solid var(--ft-control-border);border-radius:var(--ft-radius-dialog);background:var(--ft-surface);color:var(--ft-ink)}.ft-dialog::backdrop{background:#0c281dc0}
+.ft-error{background:var(--ft-error-bg);color:var(--ft-error-ink);border:1px solid var(--ft-error-border);border-radius:6px;padding:12px}
+.ft-empty{padding:32px 24px;text-align:center;border:1px dashed var(--ft-control-border);border-radius:10px;color:var(--ft-muted)}
+.ft-skeleton{min-height:24px;background:var(--ft-surface-subtle);border-radius:4px}.ft-toast{background:var(--ft-primary);color:var(--ft-on-primary);padding:12px 20px;border-radius:6px;max-width:min(480px,calc(100vw - 32px));z-index:var(--ft-z-toast)}
+.ft-shell{display:grid;grid-template-columns:var(--ft-sidebar-width) minmax(0,1fr);min-height:100dvh}.ft-workspace{padding:32px;max-width:var(--ft-content-max);margin-inline:auto;width:100%}.ft-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(310px,1fr);gap:var(--ft-layout-gap)}
+@media(max-width:1100px){.ft-shell{grid-template-columns:180px minmax(0,1fr)}.ft-workspace{padding:24px}.ft-grid{grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr)}}
+@media(max-width:850px){.ft-shell,.ft-grid{display:block}.ft-grid>*+*{margin-top:24px}.ft-title{font-size:var(--ft-text-2xl)}}
+@media(max-width:520px){.ft-workspace{padding:16px}.ft-panel{padding:16px}.ft-tabs{gap:0}.ft-tabs [role="tab"]{padding-inline:8px}}
+@media(prefers-reduced-motion:reduce){.ft-app *,.ft-app *::before,.ft-app *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

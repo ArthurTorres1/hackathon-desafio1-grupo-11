@@ -1,0 +1,139 @@
+{
+  "origins": [
+    {
+      "value": "REAL_CONSULTADA",
+      "label": "Consultado na fonte",
+      "variant": "real",
+      "meaning": "Resposta real, com fonte, consulta e período."
+    },
+    {
+      "value": "DADO_PUBLICO_IMPORTADO",
+      "label": "Base pública importada",
+      "variant": "public",
+      "meaning": "Arquivo público com data de obtenção, versão e hash."
+    },
+    {
+      "value": "DOCUMENTO_FORNECIDO",
+      "label": "Documento fornecido",
+      "variant": "document",
+      "meaning": "Arquivo anexado; seu conteúdo ainda precisa de validação."
+    },
+    {
+      "value": "DECLARACAO_DO_USUARIO",
+      "label": "Declarado",
+      "variant": "declared",
+      "meaning": "Informado pelo participante, sem comprovação documental."
+    },
+    {
+      "value": "SIMULADA",
+      "label": "Simulado",
+      "variant": "simulated",
+      "meaning": "Fixture; não constitui resultado real de checagem."
+    },
+    {
+      "value": "INDISPONIVEL",
+      "label": "Indisponível",
+      "variant": "unavailable",
+      "meaning": "Fonte não respondeu; não conclui nada sobre o lote."
+    },
+    {
+      "value": "NAO_VERIFICADA",
+      "label": "Não verificado",
+      "variant": "unverified",
+      "meaning": "Informação disponível sem conferência."
+    }
+  ],
+  "statuses": [
+    {
+      "value": "PASSOU",
+      "label": "Passou",
+      "variant": "pass",
+      "meaning": "Regra executada em evidência real; sem inconsistência encontrada no escopo."
+    },
+    {
+      "value": "ALERTA",
+      "label": "Alerta",
+      "variant": "alert",
+      "meaning": "Inconsistência a analisar; não é prova de irregularidade."
+    },
+    {
+      "value": "PENDENTE",
+      "label": "Pendente",
+      "variant": "pending",
+      "meaning": "Falta evidência ou decisão."
+    },
+    {
+      "value": "NAO_AVALIADO",
+      "label": "Não avaliado",
+      "variant": "none",
+      "meaning": "Regra não executada, inclusive quando a fonte é simulada."
+    },
+    {
+      "value": "EVIDENCIAS_CONFERIDAS",
+      "label": "Evidências conferidas",
+      "variant": "pass",
+      "meaning": "No escopo demonstrado, sujeito a auditoria e due diligence."
+    },
+    {
+      "value": "EM_REVISAO",
+      "label": "Em revisão",
+      "variant": "alert",
+      "meaning": "Alerta vigente ou caso não resolvido."
+    },
+    {
+      "value": "EVIDENCIA_INCOMPLETA",
+      "label": "Evidência incompleta",
+      "variant": "gap",
+      "meaning": "Parte do volume sem origem atribuída."
+    },
+    {
+      "value": "NAO_VERIFICADO",
+      "label": "Não verificado",
+      "variant": "none",
+      "meaning": "Checagens insuficientes para concluir."
+    },
+    {
+      "value": "READY_FOR_OPERATOR_REVIEW",
+      "label": "Pronto para o operador",
+      "variant": "pass",
+      "meaning": "Pacote reunido; decisão do operador pendente."
+    },
+    {
+      "value": "MISSING_EVIDENCE",
+      "label": "Faltam evidências",
+      "variant": "gap",
+      "meaning": "Pacote incompleto."
+    },
+    {
+      "value": "ABERTO",
+      "label": "Caso aberto",
+      "variant": "alert",
+      "meaning": "Caso de auditoria aberto."
+    },
+    {
+      "value": "EM_ANALISE",
+      "label": "Em análise",
+      "variant": "pending",
+      "meaning": "Avaliação humana em curso."
+    },
+    {
+      "value": "RESOLVIDO_COM_EVIDENCIA",
+      "label": "Resolvido com evidência",
+      "variant": "pass",
+      "meaning": "Resolução registrada com evidência vinculada."
+    },
+    {
+      "value": "REJEITADO",
+      "label": "Rejeitado",
+      "variant": "alert",
+      "meaning": "Decisão motivada de rejeição do caso/pacote."
+    },
+    {
+      "value": "MANTIDO_PENDENTE",
+      "label": "Mantido pendente",
+      "variant": "pending",
+      "meaning": "Decisão de manter pendente, com justificativa."
+    }
+  ],
+  "warning": "Status de checagem, lote, pacote e auditoria são domínios separados; nunca usar um enum único no backend."
+}

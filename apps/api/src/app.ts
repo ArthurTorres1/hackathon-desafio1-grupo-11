@@ -23,6 +23,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerWhispRoutes } from './services/whisp-routes.js';
+import { registerImageryRoutes } from './services/inpe-routes.js';
 import { registerCorrectionRoutes } from './services/corrections.js';
 import { registerForestUtilizationRoutes } from './services/forest-utilization-routes.js';
 import { registerPlotReadRoutes } from './modules/plots.js';
@@ -178,7 +179,8 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
     }
     if (grantMutation || request.method === 'POST' && !path.startsWith('/api/v1/audit-cases/')) {
-      const roles = path.startsWith('/api/v1/regulatory/') ? ['OPERATOR', 'AUDITOR', 'REGULATOR'] : path === '/api/v1/documents' || path === '/api/v1/conversion-exceptions' || path === '/api/v1/calculations/forest-utilization' || grantMutation ? ['OPERATOR', 'AUDITOR'] : ['OPERATOR'];
+      const imageryOperation = path.startsWith('/api/v1/imagery/') || /^\/api\/v1\/plots\/[^/]+\/imagery(?:\/|\-)/.test(path);
+      const roles = path.startsWith('/api/v1/regulatory/') || imageryOperation ? ['OPERATOR', 'AUDITOR', 'REGULATOR'] : path === '/api/v1/documents' || path === '/api/v1/conversion-exceptions' || path === '/api/v1/calculations/forest-utilization' || grantMutation ? ['OPERATOR', 'AUDITOR'] : ['OPERATOR'];
       if (!effectiveRoles.some(role => roles.includes(role))) {
         await logAccess(request, session.user_id, false, 'ROLE_REQUIRED');
         return reply.code(403).send({ error: { code: 'ROLE_REQUIRED', message: 'Perfil sem permissão para esta operação.', request_id: request.id } });
@@ -407,6 +409,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   await registerWhispRoutes(app);
+  await registerImageryRoutes(app);
 
   app.post<{ Body: Record<string, unknown> }>('/api/v1/shipments', { schema: { body: ShipmentCreateSchema } }, async (request, reply) => {
     const actor = request.authUser!; const b = request.body;

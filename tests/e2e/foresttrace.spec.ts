@@ -17,7 +17,7 @@ test('navega as oito etapas em desktop e mantém cadastro sintético identificad
   await expect(page.getByRole('heading', { name: 'Cadastrar parcela' })).toBeVisible();
   await expect(page.getByText('Origem declarada, não certificada.')).toBeVisible();
   await expect(page.getByText('Contorno declarado · mapa-base OpenStreetMap')).toBeVisible();
-  const labels = ['Lotes e sinais de origem', 'Registrar corte e remessa', 'Entradas, saídas e proveniência', 'Revisão humana', 'Passaporte digital', 'Pacote de evidências DDS', 'Acesso público & decisão'];
+  const labels = ['Lotes e sinais de origem', 'Registrar corte e remessa', 'Entradas, saídas e proveniência', 'Revisão humana', 'Passaporte digital', 'Pacote de evidências', 'Acesso público & decisão'];
   for (const title of labels) {
     await page.getByRole('button', { name: 'Próxima etapa' }).click();
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();

@@ -2,13 +2,16 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { fromUrl } from 'geotiff';
-import proj4 from 'proj4';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const apiRoot = join(repoRoot, 'apps', 'api');
 const requireFromApi = createRequire(join(apiRoot, 'package.json'));
+// Resolve every raster dependency from its owning workspace, whether npm hoists it or not.
+const { fromUrl } = await import(pathToFileURL(requireFromApi.resolve('geotiff')).href);
+const proj4 = requireFromApi('proj4') as (source: string, target: string) => {
+  forward(point: ReadonlyArray<number>): number[]; inverse(point: ReadonlyArray<number>): number[];
+};
 const packageVersion = async (name: string) => {
   const modulePath = requireFromApi.resolve(name);
   const packagePath = join(dirname(dirname(modulePath)), 'package.json');

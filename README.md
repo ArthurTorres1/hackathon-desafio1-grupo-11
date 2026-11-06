@@ -1,6 +1,8 @@
 # ForestTrace
 
-Entrega local e evidências desta rodada: [relatório do entregável](docs/delivery-2026-11-06.md). A imagem conferida nesta sessão está em http://127.0.0.1:3001.
+Identidade visual atual: [integração do Design System v2](docs/design-system-v2.md), com temas claro/escuro e fontes locais.
+
+Entrega local e evidências desta rodada: [relatório do entregável](docs/delivery-2026-11-06.md). Para apresentar, use o [roteiro pronto com slides, fala e checklist](docs/presentation-demo.md). A imagem conferida nesta sessão está em http://127.0.0.1:3001.
 
 Passaporte digital de evidências da madeira, da parcela ao produto. Correlaciona documentos, quantidades e sinais geoespaciais e preserva decisões humanas no histórico. Complementa DOF+/Sinaflor; não emite certificação oficial nem declaração DDS.
 
@@ -114,3 +116,10 @@ O perfil expõe somente uma porta local. Publicação requer identidade, segredo
 ## Licença
 
 O código é distribuído sob a [licença MIT](License.md). Dados e componentes de terceiros mantêm suas próprias licenças.
+## Imagens privadas INPE
+
+A integração é controlada por `INPE_IMAGERY_ENABLED=false` no servidor. Após a instalação e as migrações, defina `true` e reinicie a API para disponibilizar a busca explícita por polígono e período. No Compose, recrie o serviço `app` para aplicar a variável. O catálogo configurado é o BDC/INPE, coleção `S2-16D-2`; a imagem é uma composição temporal, com intervalo e atribuição apresentados na interface.
+
+Os limites iniciais são 10.000 ha, cinco anos por busca, 20 cenas por página e cinco páginas. A renderização privada gera PNG de até 1024 × 1024 pixels por leitura parcial dos arquivos COG. Cadastro e consulta Whisp continuam utilizáveis quando o provedor está indisponível. Imagens contextualizam a área e não comprovam autorização ou conformidade.
+
+Para rollback, restaure `INPE_IMAGERY_ENABLED=false` e reinicie/recrie a API. Preserve o banco: referências e metadados privados permanecem para auditoria, sem garantia de disponibilidade futura dos arquivos remotos. Consulte [o guia INPE](docs/inpe-integration.md) para evidências, limites técnicos e retenção.

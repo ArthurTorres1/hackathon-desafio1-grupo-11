@@ -18,6 +18,8 @@ model Organization {
   data_provenance Json
   created_at DateTime @default(now())
   users User[]
+  imagery_queries ImageryQuery[]
+  imagery_references PlotImageryReference[]
   @@map("organizations")
 }
 
@@ -28,6 +30,8 @@ model User {
   organization Organization @relation(fields: [organization_id], references: [id])
   roles String[]
   sessions Session[]
+  imagery_queries ImageryQuery[]
+  imagery_references PlotImageryReference[]
   @@map("users")
 }
 
@@ -67,6 +71,8 @@ model Plot {
   created_by_user_id String @db.Uuid
   created_at DateTime @default(now())
   lots OriginLot[]
+  imagery_queries ImageryQuery[]
+  imagery_references PlotImageryReference[]
   @@map("plots")
 }
 
@@ -534,4 +540,59 @@ model Correction {
   created_by_user_id String @db.Uuid
   created_at DateTime @default(now())
   @@map("corrections")
+}
+
+model ImageryQuery {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Restrict)
+  created_by_user_id String @db.Uuid
+  author User @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict)
+  plot_id String? @db.Uuid
+  plot Plot? @relation(fields: [plot_id], references: [id], onDelete: Restrict)
+  geometry Json
+  geometry_hash String
+  geometry_version Int?
+  context_provenance Json
+  filters Json
+  request_hash String
+  adapter_version String
+  snapshot Json
+  snapshot_hash String
+  status String
+  http_status Int?
+  failure_reason String?
+  page Int @default(1)
+  next_cursor String? @unique
+  next_request Json?
+  queried_at DateTime @default(now())
+  expires_at DateTime
+  references PlotImageryReference[]
+  @@index([organization_id, request_hash, expires_at], map: "imagery_queries_cache_idx")
+  @@index([organization_id, plot_id, geometry_hash], map: "imagery_queries_plot_idx")
+  @@map("imagery_queries")
+}
+
+model PlotImageryReference {
+  id String @id @default(uuid()) @db.Uuid
+  organization_id String @db.Uuid
+  organization Organization @relation(fields: [organization_id], references: [id], onDelete: Restrict)
+  created_by_user_id String @db.Uuid
+  author User @relation(fields: [created_by_user_id], references: [id], onDelete: Restrict)
+  plot_id String @db.Uuid
+  plot Plot @relation(fields: [plot_id], references: [id], onDelete: Restrict)
+  query_id String @db.Uuid
+  query ImageryQuery @relation(fields: [query_id], references: [id], onDelete: Restrict)
+  scene_key String
+  collection_id String
+  item_id String
+  geometry_hash String
+  geometry_version Int
+  snapshot Json
+  snapshot_hash String
+  attribution String
+  created_at DateTime @default(now())
+  @@unique([plot_id, geometry_version, query_id, scene_key], map: "plot_imagery_reference_scene_key")
+  @@index([organization_id, plot_id, geometry_version], map: "plot_imagery_references_plot_idx")
+  @@map("plot_imagery_references")
 }

@@ -4,6 +4,7 @@ export * from './forest-utilization.js';
 export * from './regulatory.js';
 export * from './responses.js';
 export * from './delivery.js';
+export * from './imagery.js';
 
 export const UF_CODES = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'] as const;
 export type UF = typeof UF_CODES[number];
