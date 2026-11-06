@@ -6,7 +6,8 @@
   "origin": {"code": "LOTE-A-DEMO", "state": "AM", "municipality": "Município fictício", "species_common_name": "angelim-vermelho", "species_scientific_name": "Dinizia excelsa", "scientific_name_verification": "PENDENTE_DE_VERIFICACAO", "volume_m3": "10.000000", "data_provenance": "SIMULADA"},
   "harvest": {"start_date": "2026-10-10", "end_date": "2026-10-10", "volume_m3": "10.000000", "actor": "OPERADOR-DEMO-A", "data_provenance": "SIMULADA"},
   "shipment": {"created_at": "2026-10-11T09:00:00Z", "dispatched_at": "2026-10-11T10:00:00Z", "received_at": "2026-10-12T14:00:00Z", "volume_dispatched_m3": "10.000000", "volume_received_m3": "10.000000", "route_states": ["AM", "SP"], "recipient_confirmation": "DECLARADA_SIMULADA"},
-  "transformation": {"input_m3": "10.000000", "output_m3": "3.000000", "product": "MADEIRA_SERRADA", "crv": "0.35", "expected_result": "PASSOU"},
+  "transformation": {"occurred_at": "2026-10-13T12:00:00Z", "input_m3": "10.000000", "output_m3": "3.000000", "residue_m3": "7.000000", "loss_m3": "0.000000", "product": "MADEIRA_SERRADA", "crv": "0.35", "expected_result": "PASSOU"},
+  "readiness": "MISSING_EVIDENCE",
   "documents": [{"reference": "DOC-A-DEMO", "provenance": "SIMULADA"}],
   "note": "Nenhum identificador, documento, licença ou propriedade real é alegado."
 }

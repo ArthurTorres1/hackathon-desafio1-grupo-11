@@ -16,6 +16,7 @@
     "db:migrate": "tsx scripts/database.ts migrate",
     "db:prepare-test": "tsx scripts/database.ts prepare-test",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "demo:ai": "tsx scripts/demo-ai.ts",
     "verify:chain": "tsx scripts/verify-audit-chain.ts",
     "backup:demo": "tsx scripts/backup-demo.ts",
     "test": "vitest run --config vitest.config.ts",

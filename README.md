@@ -47,6 +47,8 @@ npm start
 
 ## Verificação
 
+Todas as chamadas de IA devem passar pelo adaptador TypeScript `apps/api/src/services/codex-cli.ts`, que executa o Codex CLI local. Para testar a explicação do alerta R10 durante a apresentação, execute `codex login` e depois `npm run demo:ai`. Configuração e limites em [IA via Codex CLI](docs/codex-cli.md).
+
 Resultados desta rodada e limites da cobertura: [docs/validation-2026-11-06.md](docs/validation-2026-11-06.md).
 
 ```sh
@@ -78,6 +80,8 @@ No PowerShell, use `npm.cmd` se a política local bloquear `npm.ps1`. Testes de 
 As pendências que dependem de provedores, validação normativa ou decisão da equipe estão em [docs/external-dependencies.md](docs/external-dependencies.md). O comportamento das rotas está em [docs/api-contract.md](docs/api-contract.md).
 
 Os exemplos têm dados sintéticos identificados como `SIMULADA`. Pacotes demonstrativos permanecem `MISSING_EVIDENCE` mesmo após checagens ou revisão. LT-204 declara 5 m³ de serrado de 10 m³ de tora, gerando alerta frente ao parâmetro demonstrativo de 0,35, configurado em dados.
+
+No passo **Transformação**, o painel **Cubagem e aproveitamento** permite carregar dois exemplos, informar área efetiva e calcular intensidade, CRV e cubagem opcional. Inicie uma sessão de operador ou auditor para calcular. Os perfis e resultados são demonstrativos: a calculadora não registra operações nem altera saldo ou prontidão. A fórmula de volume adicional equivalente indica uma divergência sob o coeficiente selecionado, sem comprovar fraude. Contrato HTTP e exemplos em [docs/api-contract.md](docs/api-contract.md); fontes e condições em [docs/sources-and-limits.md](docs/sources-and-limits.md).
 
 Cadastro e rastreabilidade abrangem as 27 UFs; requisito local não confirmado gera pendência. A pesquisa nacional não comprova cobertura normativa integral. AM→SP é rota candidata e só poderá ser anunciada como validada quando seu checklist estiver concluído.
 

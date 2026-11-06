@@ -1,5 +1,21 @@
 # Validação das pendências técnicas — 06/11/2026
 
+## Continuação em Windows — base executável
+
+Verificação da tarefa 1.1 nesta máquina com Node 24.18.0 e npm 11.16.0: `npm ci` instalou 306 pacotes a partir do lockfile; `npm run db:generate`, `npm run typecheck` e `npm run build` passaram. Não foram encontrados arquivos vazios em `apps/api/src`, `apps/web/src` ou `packages/contracts/src`. Prisma e Vite precisaram de execução fora da sandbox por bloqueio `spawn EPERM` do esbuild. Nenhuma versão de dependência foi alterada para essa verificação.
+
+Docker e psql não foram encontrados no PATH nem nas instalações convencionais pesquisadas. PostgreSQL/PostGIS, migração, seed e testes contra banco não foram reexecutados nesta máquina; a tarefa 1.2 permanece aberta. Os resultados de banco registrados nas demais seções desta rodada são evidência histórica, não execução nesta continuação.
+
+## Calculadora de cubagem e aproveitamento — tarefas 9.1–9.3
+
+Implementados serviço puro Decimal com precisão interna de 60 dígitos, contratos TypeBox e `POST /api/v1/calculations/forest-utilization`. Os perfis são demonstrativos e versionados. Área efetiva é informada separadamente; não se presume exploração apenas pela diferença total menos APP. Denominadores nulos mantêm razões não avaliadas; dados incoerentes são rejeitados. O equivalente adicional indica quantidade sob o coeficiente, sem comprovar crime.
+
+Verificações executadas: 30 testes do motor (incluindo limites exatos antes de arredondar, maior magnitude permitida, perfis inválidos e zeros), oito de contrato e 13 HTTP via `app.inject`. Os testes HTTP usam sessão/log simulados e validam autenticação, CSRF, perfis, rejeição de parâmetros extras e resposta incompatível, sem transação operacional. Não constituem teste contra banco real. A suíte completa `npm test` passou com 117 testes em 14 arquivos no estado disponível do workspace; `npm run typecheck` e `npm run build` também passaram. `docs/openapi.json` foi exportado da aplicação real por `app.inject`, sem banco.
+
+O caso 120/20/100 ha, 2100→714 m³ apresentou 21 m³/ha, aproveitamento 70% e CRV 34%. O caso 60/10/50 ha, 1850→1100 m³ apresentou 37 m³/ha, excesso sob perfil de 350 m³, CRV 59,459459% e equivalente adicional 1292,857143 m³. Ambos permanecem `DEMONSTRATIVO`/`SIMULADA`/`MISSING_EVIDENCE`, sem alteração de saldo, autorização ou passaporte. Referências e condições estão em `docs/sources-and-limits.md`.
+
+O painel **Cubagem e aproveitamento**, no passo **Transformação**, passou em 18 testes de navegador: dez da calculadora e oito de regressão da navegação existente, em Chromium desktop e móvel (`npm run test:e2e -- tests/e2e/forest-utilization.spec.ts tests/e2e/foresttrace.spec.ts --workers=2`). Cobertos exemplos, cubagem opcional, ausência de área efetiva, limite exato, erro de entrada/serviço, sessão e invalidação do relatório ao editar. Os E2E usam API interceptada, sem banco real. As capturas `calculator-example-2.png` em `test-results/` foram inspecionadas; números mantêm leitura em tela móvel e fontes longas quebram linha. Após o ajuste visual, `npm run build -w @foresttrace/web` passou novamente.
+
 As cinco pendências do contrato foram implementadas e verificadas nesta rodada com três subagentes GPT-6 Luna e integração pelo agente principal.
 
 | Entrega | Comportamento verificado |

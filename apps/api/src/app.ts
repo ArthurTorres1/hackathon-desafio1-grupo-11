@@ -24,6 +24,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerWhispRoutes } from './services/whisp-routes.js';
 import { registerCorrectionRoutes } from './services/corrections.js';
+import { registerForestUtilizationRoutes } from './services/forest-utilization-routes.js';
 import { appendAuditEvent } from './services/audit-events.js';
 import { loadProductAncestry, plotGeometrySha } from './services/ancestry.js';
 import { verifyStoredPassport } from './services/passport-integrity.js';
@@ -139,7 +140,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
     }
     if (grantMutation || request.method === 'POST' && !path.startsWith('/api/v1/audit-cases/')) {
-      const roles = path === '/api/v1/documents' || path === '/api/v1/conversion-exceptions' || grantMutation ? ['OPERATOR', 'AUDITOR'] : ['OPERATOR'];
+      const roles = path === '/api/v1/documents' || path === '/api/v1/conversion-exceptions' || path === '/api/v1/calculations/forest-utilization' || grantMutation ? ['OPERATOR', 'AUDITOR'] : ['OPERATOR'];
       if (!session.user.roles.some(role => roles.includes(role))) {
         await logAccess(request, session.user_id, false, 'ROLE_REQUIRED');
         return reply.code(403).send({ error: { code: 'ROLE_REQUIRED', message: 'Perfil sem permissão para esta operação.', request_id: request.id } });
@@ -689,6 +690,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   registerCorrectionRoutes(app);
+  registerForestUtilizationRoutes(app);
   const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   if (existsSync(resolve(webRoot, 'index.html'))) {
     await app.register(fastifyStatic, { root: webRoot, wildcard: false });

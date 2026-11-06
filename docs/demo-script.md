@@ -16,6 +16,19 @@ Este roteiro descreve as telas implementadas na SPA e os endpoints locais previs
 
 ## Antes de apresentar
 
+### Conferência dos arquivos de exemplo (06/11/2026)
+
+Executado `npm test -- apps/api/tests/domain/demo-fixtures.test.ts`: seis testes passaram, conferindo schema decimal/UF, espécies comum/científica, cronologia, reconciliação e atribuições. Esta conferência lê os JSONs; não executa seed nem fluxo de navegador/banco.
+
+| Arquivo em `data/fixtures` | Resultado observado |
+|---|---|
+| `demo_valid.json` | A: 10 m³ de tora → 3 m³ de serrado; 7 m³ de diferença declarada; R10 PASSOU sob parâmetro demonstrativo 0,35. |
+| `demo_anomaly.json` | B/LT-204: 10 → 5 m³; R10 ALERTA sob o mesmo parâmetro; declaração preservada para revisão. |
+| `demo_mixed_origin.json` | C: entradas 6 + 4 = 10 m³ → 3 m³; atribuições medidas 1,8/1,2 m³ = 60%/40%, sem inferir mistura física. |
+| `demo_unknown_origin.json` | Variante: 60% atribuído e 40% explicitamente desconhecido; R11 mantém a lacuna. |
+
+Todos os arquivos permanecem `DADOS SIMULADOS`, `DEMONSTRATIVO` e `MISSING_EVIDENCE`. Datas são sintéticas e não definem, por si, o período da rota normativa a validar. Rótulos de origem são referências de fixture, não identificadores oficiais. O seed precisa de sua própria verificação (tarefa 7.1).
+
 - Confirmar que a API e o banco locais respondem e que os perfis de demonstração, parcelas, lotes, parâmetros e casos aparecem na interface.
 - Se um endpoint falhar, apresentar a mensagem observada e seguir somente para uma etapa cujo dado exista; não substituir a falha por resultado fictício.
 - Não usar dados pessoais, coordenadas reais ou documentos oficiais no ambiente sintético.

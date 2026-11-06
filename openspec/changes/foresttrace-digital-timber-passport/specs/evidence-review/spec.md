@@ -99,6 +99,32 @@ A apresentação SHALL percorrer ao menos uma rota interestadual de origem amaz�
 - **WHEN** os requisitos aplicáveis da rota estão confirmados e a cadeia A/B/C usa documentos fictícios
 - **THEN** a apresentação distingue validação normativa da rota e simulação operacional, mantendo os pacotes MISSING_EVIDENCE
 
+### Requirement: Calculadora demonstrativa de cubagem e aproveitamento
+O sistema SHALL calcular com Decimal cubagem, intensidade por área efetiva declarada, capacidade, aproveitamento, CRV e equivalente adicional condicional. SHALL expor fórmulas, unidades, entradas, lacunas e fonte/versão de perfis demonstrativos do servidor, sem inferir autorização.
+
+#### Scenario: Parâmetros delimitados
+- **WHEN** o servidor seleciona os perfis demonstrativos
+- **THEN** identifica fator0,70, intensidade30/ciclo35 mecanizado ou10/ciclo10 sem máquinas e CRV0,35 como referências condicionais; comunitário não implica sem máquinas, nem45% é exceção automática para serrado
+- **AND** expõe cubagem `pi × (DAP_cm/100)^2 / 4 × altura × fator` e equivalente `max(0, serrado/coeficiente - tora)`
+
+#### Scenario: Cálculo sem divergência sob o perfil
+- **WHEN** o exemplo tem área total120, APP20, efetiva100 ha, tora2100 e serrado714 m³ no perfil mecanizado demonstrativo
+- **THEN** apresenta intensidade21 m³/ha, aproveitamento70% e CRV34%, com DADOS SIMULADOS e ressalva de que o resultado não confirma conformidade
+
+#### Scenario: Divergências para revisão
+- **WHEN** área total60, APP10, efetiva50 ha, tora1850 e serrado1100 m³ usam o mesmo perfil
+- **THEN** apresenta intensidade37 m³/ha, excesso350 m³ sob o perfil e CRV aproximado59,459459%, com equivalente adicional aproximado1292,857143 m³ condicionado ao coeficiente0,35
+- **AND** informa divergência para revisão, sem afirmar fraude, injeção ilegal ou probabilidade não medida
+
+#### Scenario: Entrada inválida ou denominador ausente
+- **WHEN** há negativo, precisão superior a seis casas, APP maior que área total, área efetiva superior à diferença total menos APP, perfil desconhecido ou quantidade positiva sem denominador compatível
+- **THEN** rejeita a entrada incoerente com 422; razões sem denominador em entradas zero coerentes ficam nulas/NAO_AVALIADO com lacuna explícita
+
+#### Scenario: Relatório isolado de operações
+- **WHEN** usuário autenticado usa a calculadora por API ou painel separado da serraria
+- **THEN** obtém somente relatório DEMONSTRATIVO, sem persistir operações, criar saldo/autorização ou alterar checagens, prontidão e passaporte
+- **AND** aprovação de exceção fornecida pelo cliente não substitui o fluxo documental existente
+
 ### Requirement: Explicação sem autoridade automática
 Explicações SHALL citar campos e fontes, listar lacunas e preservar o resultado determinístico. IA opcional SHALL produzir sugestões revisáveis, sem escrever status, aprovar madeira, alegar treino validado inexistente ou exigir serviço pago.
 

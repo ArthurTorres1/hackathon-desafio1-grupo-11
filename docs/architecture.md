@@ -2,6 +2,8 @@
 
 O ForestTrace é um monólito modular TypeScript. Fastify publica a API e o build React; PostgreSQL/PostGIS persiste a cadeia e executa as verificações espaciais. Contratos TypeBox são compartilhados pelo workspace e alimentam o contrato HTTP.
 
+Chamadas de IA passam exclusivamente pelo adaptador TypeScript `services/codex-cli.ts`, que executa o Codex CLI no host local. A integração preserva as regras determinísticas e produz sugestões revisáveis. O comando `npm run demo:ai` demonstra essa fronteira; configuração e limites estão em [codex-cli.md](codex-cli.md).
+
 ```mermaid
 flowchart LR
   U[Operadores e auditores] --> W[React e Tailwind]

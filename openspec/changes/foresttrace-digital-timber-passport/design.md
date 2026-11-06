@@ -249,6 +249,20 @@ Antes: Windows PowerShell `Copy-Item .env.example .env`; macOS/Linux `cp .env.ex
 
 ## Risks / Trade-offs
 
+### Refinamento aprovado — calculadora de aproveitamento
+
+Implementar serviço puro TypeScript/Decimal, contrato compartilhado TypeBox, `POST /api/v1/calculations/forest-utilization` autenticado e painel separado no passo de serraria. A calculadora é sempre DEMONSTRATIVA/SIMULADA, sem persistência operacional: não cria saldo, autorização, caso, checagem de lote ou versão de passaporte. Retorna fórmulas, entradas, unidades, parâmetros e versões, resultados por métrica, lacunas e explicações; sem score de risco ou probabilidade inventada.
+
+Cubagem: `pi × (DAP_cm/100)^2 / 4 × altura_comercial_m × fator_forma`. O fator 0,70 é parâmetro demonstrativo, não regra universal; DAP mínimo não autoriza corte automaticamente. Registrar fonte/versão do perfil e distinguir essa aproximação da equação do PMFS aplicável.
+
+Área efetiva é declarada explicitamente e deve satisfazer `0 <= area_efetiva_ha <= area_total_ha - area_app_ha`, com APP entre zero e área total. Não inferir área de exploração apenas descontando APP. Capacidade sob o perfil = área efetiva × intensidade; intensidade observada = tora extraída / área efetiva; aproveitamento = tora / capacidade × 100. Perfis demonstrativos: mecanizado 30 m³/ha com ciclo inicial 35 anos e sem máquinas 10 m³/ha com ciclo 10 anos. A categoria comunitária não seleciona automaticamente o segundo perfil. Fonte de referência CONAMA 406/2009, aplicabilidade/vigência ainda sujeitas à validação; art. 10 exige equação do PMFS a partir do segundo POA.
+
+CRV observado = serrado / tora × 100; serrado esperado = tora × coeficiente; resíduos apenas como diferença declarada, sem presumir repartição de 65%. Volume adicional equivalente = `max(0, serrado/coeficiente - tora)`, apresentado como estimativa condicional, nunca prova de injeção ilegal. Perfil demonstrativo tora→serrado 0,35; 0,45 não é exceção automática (na tabela de referência corresponde a lâmina faqueada). Não aceitar aprovação de exceção enviada pelo cliente; exceções operacionais continuam no fluxo existente com documento íntegro, autoridade, escopo e vigência.
+
+API aceita strings decimais não negativas finitas com até seis casas, IDs fechados de perfis do servidor e cubagem opcional (DAP e altura estritamente positivos). Rejeitar entradas incoerentes, precisão excessiva e perfil desconhecido com 422. Denominador zero retorna razão nula/NAO_AVALIADO e lacuna; tora zero com serrado positivo ou área efetiva zero com extração positiva são incoerências rejeitadas, nunca resultado aprovado. Resultados usam precisão decimal interna e arredondamento apenas de apresentação. Ausência de alerta matemático não atribui conformidade geral.
+
+Aceite: casos sintéticos `120/20/100 ha efetivos, 2100→714 m³` (21 m³/ha, 70%, CRV34%) e `60/10/50 ha efetivos, 1850→1100 m³` (37 m³/ha, excesso350, CRV≈59,459459%, equivalente adicional≈1292,857143 m³), limites exatos, zero, negativos, precisão, área efetiva incoerente e impossibilidade de promover saldo/prontidão. UI mostra DADOS SIMULADOS, fonte/versão, unidades, fórmula e explicação por resultado, com exemplos carregáveis e estado de erro/serviço indisponível.
+
 - [48 h e escopo amplo] → fatias verticais, modelos simples, corte de P1 antes de sacrificar A/B/C, mistura ou integridade; sem novos recursos H40–H48.
 - [Whisp indisponível ou contrato não confirmado] → adapter desligado, fixtures explícitas, consulta real como meta condicionada e cache de execução real se obtida.
 - [PostGIS/containers indisponíveis na máquina] → documentar conexão com PostgreSQL/PostGIS já instalado, sem trocar silenciosamente para SQLite.

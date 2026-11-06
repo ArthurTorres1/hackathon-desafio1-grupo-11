@@ -99,6 +99,32 @@ O pacote demonstrativo permanece `MISSING_EVIDENCE`; cobertura normativa segue `
 
 Consulta e exportação privadas filtram referências documentais sem grant e informam a quantidade de documentos retidos. A integridade é verificada sobre o snapshot original; uma visão filtrada não deve ser confundida com esse snapshot integral.
 
+## Calculadora demonstrativa de aproveitamento
+
+`POST /api/v1/calculations/forest-utilization` retorna um relatório isolado. Exige sessão, CSRF, `Idempotency-Key` e papel `OPERATOR` ou `AUDITOR`; comprador recebe 403. A chave é validada pelo envelope HTTP, mas não é persistida: repetir o cálculo não cria operações, saldo, eventos, autorizações nem alterações de passaporte.
+
+Payload (todos os números medidos são strings com até seis casas decimais):
+
+```json
+{
+  "area_total_ha": "120",
+  "area_app_ha": "20",
+  "area_effective_ha": "100",
+  "extracted_log_volume_m3": "2100",
+  "declared_sawn_volume_m3": "714",
+  "management_profile_id": "DEMO_MECHANIZED_35Y_V1",
+  "tree": { "dap_cm": "50", "commercial_height_m": "12" }
+}
+```
+
+`tree` e `area_effective_ha` são opcionais. Ausência da área efetiva mantém a origem `NAO_AVALIADO`, com lacuna explícita; não se presume que total menos APP seja área explorável. Perfis do servidor: `DEMO_MECHANIZED_35Y_V1` (30 m³/ha, ciclo35) e `DEMO_NON_MECHANIZED_10Y_V1` (10 m³/ha, ciclo10). Ambos usam CRV demonstrativo0,35 e fator de forma0,70; não aceitam coeficiente, aprovação de exceção ou escopo REAL fornecidos pelo cliente. Exceções operacionais continuam no fluxo documental existente.
+
+Resposta 200 direta: `assessment_scope=DEMONSTRATIVO`, `data_provenance=SIMULADA`, `label=DADOS SIMULADOS`, `readiness=MISSING_EVIDENCE`, `inputs`, `parameters`, `origin`, `mill`, `tree`, `gaps`, `formulas` e `units`. Parâmetros incluem ID, versão e fonte. Resultados por cálculo usam `PASSOU`, `ALERTA` ou `NAO_AVALIADO` somente sob o perfil; não indicam conformidade. Métricas são strings decimais arredondadas para exibição (até seis casas), ou `null` quando não avaliadas; decisões internas usam Decimal sem arredondamento prévio. O exemplo retorna intensidade21, aproveitamento70% e CRV34%. No exemplo60/10/50 ha, tora1850 e serrado1100 m³, retorna intensidade37, excesso350 e equivalente adicional1292,857143 m³.
+
+O equivalente `max(0, serrado/CRV − entrada)` descreve quantidade adicional sob o coeficiente adotado, sem comprovar crime ou origem física. `residue_difference_m3` é apenas entrada menos serrado, podendo ser negativo em declaração incoerente; não é medição de serragem/perdas. Fonte, vigência e aplicabilidade estão delimitadas em [sources-and-limits.md](sources-and-limits.md).
+
+Entradas negativas, não textuais, precisão excedida, perfil desconhecido, campos extras e áreas/denominadores incoerentes retornam422 com erro identificado e `request_id`. Falta de sessão retorna401; CSRF/papel inválido403. O schema da resposta é conferido explicitamente antes da serialização. `/openapi.json` publica os contratos e `docs/openapi.json` contém a exportação para revisão.
+
 ## Dependências e limites
 
 A avaliação normativa completa e as integrações externas reais continuam pendentes, conforme [external-dependencies.md](external-dependencies.md). Correções de software não confirmam normas, autenticidade documental ou autorização oficial.

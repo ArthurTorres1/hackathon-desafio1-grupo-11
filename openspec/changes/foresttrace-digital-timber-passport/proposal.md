@@ -21,6 +21,10 @@ Documentos, volumes e sinais geoespaciais da madeira estão dispersos, dificulta
 
 ## Capabilities
 
+### Refinamento aprovado: cálculo de aproveitamento
+
+Adicionar calculadora demonstrativa em TypeScript para cubagem de árvore, intensidade por área efetiva e CRV industrial, com aritmética decimal, perfis versionados escolhidos no servidor e parâmetros/fonte/limitações visíveis. O relatório identifica divergências para revisão humana e volume adicional equivalente sob o coeficiente adotado; não comprova fraude nem madeira ilegal. Não cria saldo, autorização, checagem operacional ou passaporte e não altera sua prontidão. WHISP e MIT permanecem conforme os requisitos existentes.
+
 ### New Capabilities
 
 - `plot-registration`: organizações, parcelas, geometrias, lotes de origem, autorizações e proveniência dos dados.

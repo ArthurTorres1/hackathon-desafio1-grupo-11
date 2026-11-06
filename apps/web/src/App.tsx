@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import PlotMap from './components/Map';
+import ForestUtilizationCalculator from './components/ForestUtilizationCalculator';
 import { api, ApiError, date, downloadBundle, emptyDashboard, label, type Dashboard, type Entity, type User, UFS, SYNTHETIC_POLYGON } from './lib/api';
 
 const steps = [
@@ -87,7 +88,7 @@ export default function App() {
           <div className="primary-column">{step === 0 && <Registration geo={geo} setGeo={setGeo} geometry={parsedGeo} uf={uf} setUf={setUf} busy={busy} organizationId={user?.organization_id ?? ''} onCreate={(body) => action('Cadastro enviado. Atualizando informações da API…', () => post('/api/v1/plots', body))} />}
             {step === 1 && <Origin dashboard={dash} uf={uf} setUf={setUf} busy={busy} onRefresh={refresh} currentOrgId={user?.organization_id ?? ''} checks={dash.checks} run={action} post={post} />}
             {step === 2 && <Custody dashboard={dash} busy={busy} run={action} post={post} orgOptions={orgOptions} currentOrgId={user?.organization_id ?? ''} />}
-            {step === 3 && <MillForm dashboard={dash} busy={busy} run={action} post={post} currentOrgId={user?.organization_id ?? ''} />}
+            {step === 3 && <><MillForm dashboard={dash} busy={busy} run={action} post={post} currentOrgId={user?.organization_id ?? ''} /><ForestUtilizationCalculator key={user?.id ?? 'anonymous'} csrf={csrf} disabled={!user} /></>}
             {step === 4 && <ReviewForm userId={user?.id??''} cases={dash.audit_cases} documents={dash.documents} selected={selected} setSelected={setSelected} comment={comment} setComment={setComment} evidence={evidence} setEvidence={setEvidence} busy={busy} run={action} post={post} />}
             {step === 5 && <PassportForm items={dash.passports} products={dash.product_lots} token={passportId} setToken={setPassportId} busy={busy} run={action} post={post} publicToken={publicToken} setPublicToken={setPublicToken} />}
             {step === 6 && <Bundle items={dash.passports} busy={busy} onDownload={(id, format) => action(`Solicitando exportação ${format.toUpperCase()}…`, () => downloadBundle(id, format))} />}

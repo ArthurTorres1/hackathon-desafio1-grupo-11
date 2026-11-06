@@ -1,0 +1,3140 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ForestTrace API",
+    "version": "1.0.0",
+    "description": "Trilha demonstrativa de evidências; não certifica legalidade."
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/openapi.json": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/personas": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id"
+                ],
+                "properties": {
+                  "user_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/documents": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "name",
+                  "type",
+                  "content_base64",
+                  "source",
+                  "data_provenance",
+                  "assessment_scope",
+                  "visibility"
+                ],
+                "properties": {
+                  "name": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "type": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "content_base64": {
+                    "maxLength": 14000000,
+                    "type": "string"
+                  },
+                  "source": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "data_provenance": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "REAL_CONSULTADA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DADO_PUBLICO_IMPORTADO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DOCUMENTO_FORNECIDO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DECLARACAO_DO_USUARIO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SIMULADA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "INDISPONIVEL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "NAO_VERIFICADA"
+                        ]
+                      }
+                    ]
+                  },
+                  "assessment_scope": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "REAL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DEMONSTRATIVO"
+                        ]
+                      }
+                    ]
+                  },
+                  "visibility": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PRIVATE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "BUYER_RELEASED"
+                        ]
+                      }
+                    ]
+                  },
+                  "fiscal_key": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{id}/download": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{id}/grants": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organization_id"
+                ],
+                "properties": {
+                  "organization_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{id}/grants/{organization_id}": {
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "organization_id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/conversion-exceptions": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "conversion_parameter_id",
+                  "document_id",
+                  "coefficient",
+                  "product",
+                  "species_scientific",
+                  "issuing_authority",
+                  "approval_reference",
+                  "valid_from",
+                  "valid_until",
+                  "data_provenance"
+                ],
+                "properties": {
+                  "conversion_parameter_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "document_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "coefficient": {
+                    "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,9})?$",
+                    "type": "string"
+                  },
+                  "product": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "species_scientific": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "issuing_authority": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "approval_reference": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "valid_from": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "valid_until": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "data_provenance": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/passports/{id}/grants": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organization_id"
+                ],
+                "properties": {
+                  "organization_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/passports/{id}/grants/{organization_id}": {
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "organization_id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/plots": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "organization_id",
+                  "country",
+                  "state",
+                  "municipality",
+                  "declared_property",
+                  "geometry",
+                  "geometry_version",
+                  "geometry_date",
+                  "data_provenance"
+                ],
+                "properties": {
+                  "organization_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "BR"
+                    ]
+                  },
+                  "state": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AC"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AP"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AM"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "BA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "CE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DF"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "ES"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "GO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MT"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MS"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MG"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PB"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PR"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PI"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RJ"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RN"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RS"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RR"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SC"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SP"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "TO"
+                        ]
+                      }
+                    ]
+                  },
+                  "municipality": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "declared_property": {
+                    "minLength": 1,
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  "geometry": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "coordinates"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "Polygon"
+                            ]
+                          },
+                          "coordinates": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "minItems": 4,
+                              "type": "array",
+                              "items": {
+                                "minItems": 2,
+                                "maxItems": 3,
+                                "type": "array",
+                                "items": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "type",
+                          "coordinates"
+                        ],
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "MultiPolygon"
+                            ]
+                          },
+                          "coordinates": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "minItems": 4,
+                                "type": "array",
+                                "items": {
+                                  "minItems": 2,
+                                  "maxItems": 3,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "number"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "geometry_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "geometry_date": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "data_provenance": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "REAL_CONSULTADA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DADO_PUBLICO_IMPORTADO"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DOCUMENTO_FORNECIDO"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DECLARACAO_DO_USUARIO"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "SIMULADA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "INDISPONIVEL"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "NAO_VERIFICADA"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "label",
+                            "source",
+                            "informed_by",
+                            "recorded_at",
+                            "confidence"
+                          ],
+                          "properties": {
+                            "label": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "REAL_CONSULTADA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "DADO_PUBLICO_IMPORTADO"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "DOCUMENTO_FORNECIDO"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "DECLARACAO_DO_USUARIO"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "SIMULADA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "INDISPONIVEL"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "NAO_VERIFICADA"
+                                  ]
+                                }
+                              ]
+                            },
+                            "source": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "informed_by": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "recorded_at": {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "ALTA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "MEDIA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "BAIXA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "NAO_AVALIADA"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/origin-lots": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "plot_id",
+                  "code",
+                  "species_common_name",
+                  "species_scientific_name",
+                  "authorized_volume_m3",
+                  "permit_reference",
+                  "permit_document_id",
+                  "valid_from",
+                  "valid_until",
+                  "right_of_use",
+                  "assessment_scope",
+                  "data_provenance"
+                ],
+                "properties": {
+                  "plot_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "code": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "species_common_name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "species_scientific_name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "authorized_volume_m3": {
+                    "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "permit_reference": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "permit_document_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "valid_from": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "valid_until": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "right_of_use": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "assessment_scope": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "REAL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DEMONSTRATIVO"
+                        ]
+                      }
+                    ]
+                  },
+                  "data_provenance": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "REAL_CONSULTADA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DADO_PUBLICO_IMPORTADO"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DOCUMENTO_FORNECIDO"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DECLARACAO_DO_USUARIO"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "SIMULADA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "INDISPONIVEL"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "NAO_VERIFICADA"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "label",
+                            "source",
+                            "informed_by",
+                            "recorded_at",
+                            "confidence"
+                          ],
+                          "properties": {
+                            "label": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "REAL_CONSULTADA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "DADO_PUBLICO_IMPORTADO"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "DOCUMENTO_FORNECIDO"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "DECLARACAO_DO_USUARIO"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "SIMULADA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "INDISPONIVEL"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "NAO_VERIFICADA"
+                                  ]
+                                }
+                              ]
+                            },
+                            "source": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "informed_by": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "recorded_at": {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "ALTA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "MEDIA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "BAIXA"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "NAO_AVALIADA"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/harvests": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "origin_lot_id",
+                  "start_date",
+                  "end_date",
+                  "volume_m3"
+                ],
+                "properties": {
+                  "origin_lot_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "end_date": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "volume_m3": {
+                    "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "species_common_name": {
+                    "type": "string"
+                  },
+                  "tag": {
+                    "type": "string"
+                  },
+                  "document_ids": {
+                    "type": "array",
+                    "items": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "pending_request_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/lots/{id}/assess": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "options": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "properties": {
+                      "nationalCodes": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "pattern": "^[a-z]{2}$",
+                          "type": "string"
+                        }
+                      },
+                      "unitType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "ha"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "acres"
+                            ]
+                          }
+                        ]
+                      },
+                      "async": {
+                        "type": "boolean"
+                      },
+                      "geometryAuditTrail": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "refresh": {
+                    "type": "boolean"
+                  },
+                  "resume_query_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "use_simulated_fixture": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/origin-lots/{id}/geospatial-assessments": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "options": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "properties": {
+                      "nationalCodes": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "pattern": "^[a-z]{2}$",
+                          "type": "string"
+                        }
+                      },
+                      "unitType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "ha"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "acres"
+                            ]
+                          }
+                        ]
+                      },
+                      "async": {
+                        "type": "boolean"
+                      },
+                      "geometryAuditTrail": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "refresh": {
+                    "type": "boolean"
+                  },
+                  "resume_query_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "use_simulated_fixture": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/lots/{id}/assessments": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/shipments": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "sender_organization_id",
+                  "recipient_organization_id",
+                  "origin_state",
+                  "destination_state",
+                  "items",
+                  "route_states",
+                  "transporter",
+                  "official_system",
+                  "document_ids"
+                ],
+                "properties": {
+                  "sender_organization_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "recipient_organization_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "origin_state": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AC"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AP"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AM"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "BA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "CE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DF"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "ES"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "GO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MT"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MS"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MG"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PB"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PR"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PI"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RJ"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RN"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RS"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RR"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SC"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SP"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "TO"
+                        ]
+                      }
+                    ]
+                  },
+                  "destination_state": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AC"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AP"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "AM"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "BA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "CE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DF"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "ES"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "GO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MT"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MS"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MG"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PB"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PR"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "PI"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RJ"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RN"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RS"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RR"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SC"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SP"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "TO"
+                        ]
+                      }
+                    ]
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "lot_id",
+                        "volume_m3"
+                      ],
+                      "properties": {
+                        "lot_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "volume_m3": {
+                          "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "route_states": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "AC"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "AL"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "AP"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "AM"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "BA"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "CE"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "DF"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "ES"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "GO"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "MA"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "MT"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "MS"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "MG"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PA"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PB"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PR"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PE"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "PI"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "RJ"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "RN"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "RS"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "RO"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "RR"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "SC"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "SP"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "SE"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "TO"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "transporter": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "official_system": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "document_ids": {
+                    "type": "array",
+                    "items": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "fiscal_key": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/shipments/{id}/dispatch": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "occurred_at"
+                ],
+                "properties": {
+                  "occurred_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/shipments/{id}/receive": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "occurred_at",
+                  "items"
+                ],
+                "properties": {
+                  "occurred_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "lot_id",
+                        "volume_m3"
+                      ],
+                      "properties": {
+                        "lot_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "volume_m3": {
+                          "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/transformations": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "code",
+                  "occurred_at",
+                  "operator_organization_id",
+                  "conversion_parameter_id",
+                  "inputs",
+                  "outputs",
+                  "residue_m3",
+                  "loss_m3",
+                  "assessment_scope"
+                ],
+                "properties": {
+                  "code": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "occurred_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "operator_organization_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "conversion_parameter_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "inputs": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "lot_id",
+                        "volume_m3"
+                      ],
+                      "properties": {
+                        "lot_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "volume_m3": {
+                          "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "outputs": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "client_ref",
+                        "product",
+                        "volume_m3",
+                        "allocations"
+                      ],
+                      "properties": {
+                        "client_ref": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "product": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "volume_m3": {
+                          "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "allocations": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "origin_lot_id",
+                              "volume_m3"
+                            ],
+                            "properties": {
+                              "origin_lot_id": {
+                                "format": "uuid",
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "volume_m3": {
+                                "pattern": "^(?=.*[1-9])(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "residue_m3": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "loss_m3": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "assessment_scope": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "REAL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DEMONSTRATIVO"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/audit-cases/{id}/decisions": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "decision",
+                  "comment",
+                  "evidence_ids"
+                ],
+                "properties": {
+                  "decision": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "EM_ANALISE"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "RESOLVIDO_COM_EVIDENCIA"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "REJEITADO"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "MANTIDO_PENDENTE"
+                        ]
+                      }
+                    ]
+                  },
+                  "comment": {
+                    "minLength": 1,
+                    "maxLength": 10000,
+                    "type": "string"
+                  },
+                  "evidence_ids": {
+                    "type": "array",
+                    "items": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "conversion_exception_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/public/passports/{public_token}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "public_token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/passports": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "product_lot_id",
+                  "assessment_scope"
+                ],
+                "properties": {
+                  "product_lot_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "assessment_scope": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "REAL"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DEMONSTRATIVO"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/passports/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/passports/{id}/bundle": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/passports/{id}/verify": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/corrections": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "entity_type",
+                  "entity_id",
+                  "expected_version",
+                  "reason",
+                  "changes",
+                  "evidence_ids"
+                ],
+                "properties": {
+                  "entity_type": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "ORIGIN_LOT"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "SHIPMENT"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "TRANSFORMATION"
+                        ]
+                      }
+                    ]
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "expected_version": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "changes": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "evidence_ids": {
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/corrections/{type}/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "ORIGIN_LOT"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "SHIPMENT"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "TRANSFORMATION"
+                  ]
+                }
+              ]
+            },
+            "in": "path",
+            "name": "type",
+            "required": true
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/calculations/forest-utilization": {
+      "post": {
+        "summary": "Calcula cubagem e aproveitamento sem alterar operações ou prontidão",
+        "tags": [
+          "Calculadora demonstrativa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "area_total_ha",
+                  "area_app_ha",
+                  "extracted_log_volume_m3",
+                  "declared_sawn_volume_m3",
+                  "management_profile_id"
+                ],
+                "properties": {
+                  "area_total_ha": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "area_app_ha": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "area_effective_ha": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "extracted_log_volume_m3": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "declared_sawn_volume_m3": {
+                    "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                    "type": "string"
+                  },
+                  "management_profile_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DEMO_MECHANIZED_35Y_V1"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "DEMO_NON_MECHANIZED_10Y_V1"
+                        ]
+                      }
+                    ]
+                  },
+                  "tree": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "dap_cm",
+                      "commercial_height_m"
+                    ],
+                    "properties": {
+                      "dap_cm": {
+                        "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                        "type": "string"
+                      },
+                      "commercial_height_m": {
+                        "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "assessment_scope",
+                    "data_provenance",
+                    "label",
+                    "readiness",
+                    "inputs",
+                    "parameters",
+                    "origin",
+                    "mill",
+                    "tree",
+                    "gaps",
+                    "formulas",
+                    "units"
+                  ],
+                  "properties": {
+                    "assessment_scope": {
+                      "type": "string",
+                      "enum": [
+                        "DEMONSTRATIVO"
+                      ]
+                    },
+                    "data_provenance": {
+                      "type": "string",
+                      "enum": [
+                        "SIMULADA"
+                      ]
+                    },
+                    "label": {
+                      "type": "string",
+                      "enum": [
+                        "DADOS SIMULADOS"
+                      ]
+                    },
+                    "readiness": {
+                      "type": "string",
+                      "enum": [
+                        "MISSING_EVIDENCE"
+                      ]
+                    },
+                    "inputs": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "area_total_ha",
+                        "area_app_ha",
+                        "extracted_log_volume_m3",
+                        "declared_sawn_volume_m3",
+                        "management_profile_id"
+                      ],
+                      "properties": {
+                        "area_total_ha": {
+                          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "area_app_ha": {
+                          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "area_effective_ha": {
+                          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "extracted_log_volume_m3": {
+                          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "declared_sawn_volume_m3": {
+                          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "management_profile_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DEMO_MECHANIZED_35Y_V1"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "DEMO_NON_MECHANIZED_10Y_V1"
+                              ]
+                            }
+                          ]
+                        },
+                        "tree": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "dap_cm",
+                            "commercial_height_m"
+                          ],
+                          "properties": {
+                            "dap_cm": {
+                              "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            },
+                            "commercial_height_m": {
+                              "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "parameters": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "management",
+                        "conversion",
+                        "tree"
+                      ],
+                      "properties": {
+                        "management": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "source",
+                            "intensity_m3_ha",
+                            "initial_cycle_years"
+                          ],
+                          "properties": {
+                            "id": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "source": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "intensity_m3_ha": {
+                              "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            },
+                            "initial_cycle_years": {
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "conversion": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "source",
+                            "coefficient"
+                          ],
+                          "properties": {
+                            "id": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "source": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "coefficient": {
+                              "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "tree": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "source",
+                            "form_factor"
+                          ],
+                          "properties": {
+                            "id": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "version": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "source": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "form_factor": {
+                              "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "origin": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "result",
+                        "area_effective_ha",
+                        "capacity_m3",
+                        "intensity_m3_ha",
+                        "utilization_pct",
+                        "excess_m3",
+                        "explanation"
+                      ],
+                      "properties": {
+                        "result": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PASSOU"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "ALERTA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "NAO_AVALIADO"
+                              ]
+                            }
+                          ]
+                        },
+                        "area_effective_ha": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "capacity_m3": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "intensity_m3_ha": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "utilization_pct": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "excess_m3": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "explanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "mill": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "result",
+                        "crv_pct",
+                        "expected_sawn_m3",
+                        "residue_difference_m3",
+                        "additional_log_equivalent_m3",
+                        "explanation"
+                      ],
+                      "properties": {
+                        "result": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PASSOU"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "ALERTA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "NAO_AVALIADO"
+                              ]
+                            }
+                          ]
+                        },
+                        "crv_pct": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "expected_sawn_m3": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "residue_difference_m3": {
+                          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "additional_log_equivalent_m3": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string"
+                        },
+                        "explanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "tree": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "result",
+                        "volume_m3",
+                        "explanation"
+                      ],
+                      "properties": {
+                        "result": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "PASSOU"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "ALERTA"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "NAO_AVALIADO"
+                              ]
+                            }
+                          ]
+                        },
+                        "volume_m3": {
+                          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,6})?$",
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "explanation": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "formulas": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "tree",
+                        "capacity",
+                        "intensity",
+                        "utilization",
+                        "crv",
+                        "additional_log_equivalent"
+                      ],
+                      "properties": {
+                        "tree": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "capacity": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "intensity": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "utilization": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "crv": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "additional_log_equivalent": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "units": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "area",
+                        "volume",
+                        "dap",
+                        "height",
+                        "intensity",
+                        "ratio"
+                      ],
+                      "properties": {
+                        "area": {
+                          "type": "string",
+                          "enum": [
+                            "ha"
+                          ]
+                        },
+                        "volume": {
+                          "type": "string",
+                          "enum": [
+                            "m³"
+                          ]
+                        },
+                        "dap": {
+                          "type": "string",
+                          "enum": [
+                            "cm"
+                          ]
+                        },
+                        "height": {
+                          "type": "string",
+                          "enum": [
+                            "m"
+                          ]
+                        },
+                        "intensity": {
+                          "type": "string",
+                          "enum": [
+                            "m³/ha"
+                          ]
+                        },
+                        "ratio": {
+                          "type": "string",
+                          "enum": [
+                            "%"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/p/{public_token}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "public_token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ]
+}
