@@ -47,6 +47,8 @@ npm start
 
 ## Verificação
 
+Resultados desta rodada e limites da cobertura: [docs/validation-2026-11-06.md](docs/validation-2026-11-06.md).
+
 ```sh
 npm run typecheck
 npm test
@@ -73,11 +75,15 @@ No PowerShell, use `npm.cmd` se a política local bloquear `npm.ps1`. Testes de 
 
 ## Dados e limites
 
+As pendências que dependem de provedores, validação normativa ou decisão da equipe estão em [docs/external-dependencies.md](docs/external-dependencies.md). O comportamento das rotas está em [docs/api-contract.md](docs/api-contract.md).
+
 Os exemplos têm dados sintéticos identificados como `SIMULADA`. Pacotes demonstrativos permanecem `MISSING_EVIDENCE` mesmo após checagens ou revisão. LT-204 declara 5 m³ de serrado de 10 m³ de tora, gerando alerta frente ao parâmetro demonstrativo de 0,35, configurado em dados.
 
 Cadastro e rastreabilidade abrangem as 27 UFs; requisito local não confirmado gera pendência. A pesquisa nacional não comprova cobertura normativa integral. AM→SP é rota candidata e só poderá ser anunciada como validada quando seu checklist estiver concluído.
 
 Whisp é opcional e a chave fica no servidor, fora do git. Sem contrato confirmado, chave ou acesso, a avaliação real fica não avaliada e a fixture recebe o selo **DADOS SIMULADOS**. Não há integração oficial DOF+/SEFAZ nem envio de DDS nesta demo.
+
+O passo **Origem & sinais** permite consultar a Whisp para um lote próprio, acompanhar o histórico local e retomar jobs pendentes. Configure o servidor conforme [Integração Whisp](docs/whisp-integration.md). Para verificar o acesso com o polígono sintético do projeto, execute `npm exec -- tsx scripts/assess-whisp.ts`; a evidência fica em `data/private/`, fora do Git. Uma consulta externa real sobre dados sintéticos continua demonstrativa.
 
 O autor de uma operação não decide seu próprio alerta. Outro auditor autorizado da mesma organização pode revisar com evidências e justificativa. Contas locais são personas sintéticas; não representam autenticação de produção.
 
@@ -95,4 +101,4 @@ O perfil expõe somente uma porta local. Publicação requer identidade, segredo
 
 ## Licença
 
-A equipe precisa definir a licença de distribuição. O arquivo `License.md` existente está vazio e não concede licença open source.
+O código é distribuído sob a [licença MIT](License.md). Dados e componentes de terceiros mantêm suas próprias licenças.

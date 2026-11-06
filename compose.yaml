@@ -33,6 +33,7 @@ services:
       PRIVATE_STORAGE_DIR: /app/data/private
       WHISP_API_KEY: ${WHISP_API_KEY:-}
       WHISP_SUBMIT_URL: ${WHISP_SUBMIT_URL:-}
+      WHISP_POLL_URL_TEMPLATE: ${WHISP_POLL_URL_TEMPLATE:-}
       WHISP_CONTRACT_CONFIRMED: ${WHISP_CONTRACT_CONFIRMED:-false}
     volumes:
       - documents:/app/data/private

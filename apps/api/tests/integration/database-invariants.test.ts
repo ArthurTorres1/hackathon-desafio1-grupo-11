@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 
 const databaseUrl = process.env.TEST_DATABASE_URL!;
 if (!databaseUrl || new URL(databaseUrl).pathname !== '/foresttrace_test') throw new Error('Banco de teste isolado obrigatório.');
@@ -31,6 +32,13 @@ async function createOrigin(tx: Prisma.TransactionClient) {
 }
 
 describe('invariantes persistidas em PostgreSQL/PostGIS', () => {
+  it('valida a amostra GeoJSON sintética e sua área de referência em hectares', async () => {
+    const sample = JSON.parse(await readFile('data/public_samples/demo-plot.geojson', 'utf8'));
+    const geometry = JSON.stringify(sample.geometry);
+    const rows = await owner.$queryRaw<Array<{ valid: boolean; area_ha: number }>>`SELECT ST_IsValid(g) AS valid, ST_Area(g::geography)/10000 AS area_ha FROM (SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geometry}),4326) AS g) q`;
+    expect(rows[0]!.valid).toBe(true);
+    expect(Math.abs(rows[0]!.area_ha - sample.properties.reference_area_ha_estimate)).toBeLessThan(0.2);
+  });
   it('calcula hectares por geografia e não por graus', async () => {
     const rows = await owner.$queryRaw<Array<{ area_ha: number }>>`SELECT ST_Area(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[-60,-3],[-59.999,-3],[-59.999,-2.999],[-60,-2.999],[-60,-3]]]}')::geography)/10000 AS area_ha`;
     expect(rows[0]!.area_ha).toBeGreaterThan(1.2);

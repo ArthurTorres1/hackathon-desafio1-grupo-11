@@ -6,6 +6,9 @@ import { assessReadiness } from '../../src/services/review-readiness.js';
 import { canonicalize, eventHash, verifyEventChain, type ChainEvent } from '../../src/services/integrity.js';
 
 describe('volume rules',()=>{
+  it('aceita parâmetro vigente sem término definido, sem dispensar início ou fonte',()=>{
+    expect(assessConversion({ inputVolumeM3:'10', outputVolumeM3:'3', multiplier:'0.35', parameterVersion:'demo-v1', parameterSource:'SIMULADA', parameterValidFrom:'2026-01-01', assessmentDate:'2026-11-05' }).result).toBe('PASSOU');
+  });
   it.each([['3','PASSOU'],['5','ALERTA'],['3.5','PASSOU']] as const)('R10 input 10 output %s', (output,result)=>{
     expect(assessConversion({inputVolumeM3:'10',outputVolumeM3:output,multiplier:'0.35',parameterVersion:'demo-v1',parameterSource:'fixture sintética',parameterValidFrom:'2025-01-01',parameterValidUntil:'2027-01-01',assessmentDate:'2026-01-01'}).result).toBe(result);
   });

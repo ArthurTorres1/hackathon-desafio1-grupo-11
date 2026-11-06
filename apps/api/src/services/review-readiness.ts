@@ -8,6 +8,24 @@ export interface ReadinessInput {
   has_unknown_origin: boolean;
   has_simulated_supporting_evidence: boolean;
 }
+/** True when any nested evidence value explicitly labels itself synthetic. */
+export function containsSimulatedEvidence(value: unknown): boolean {
+  if (typeof value === 'string') return /simulad|sint[eé]tic|fixture/i.test(value);
+  if (Array.isArray(value)) return value.some(containsSimulatedEvidence);
+  if (value && typeof value === 'object') return Object.values(value as Record<string, unknown>).some(containsSimulatedEvidence);
+  return false;
+}
+
+/** Caller orders newest-first; only the latest assessment per entity and rule is current. */
+export function latestChecks<T extends { entity_type: string; entity_id: string; rule_id: string; assessment_scope?: string }>(checks: T[]): T[] {
+  const seen = new Set<string>();
+  return checks.filter((check) => {
+    const key = `${check.entity_type}:${check.entity_id}:${check.rule_id}:${check.assessment_scope ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 export function assessReadiness(input: ReadinessInput) {
   const reasons: string[]=[];
   if (input.assessment_scope==='DEMONSTRATIVO') reasons.push('ASSESSMENT_SCOPE_DEMONSTRATIVE');

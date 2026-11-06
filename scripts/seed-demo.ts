@@ -1,10 +1,12 @@
 import 'dotenv/config';
-import { prisma } from '../apps/api/src/db.js';
+import { prisma as database } from '../apps/api/src/db.js';
 import { sha256Canonical, sha256Bytes } from '../apps/api/src/services/integrity.js';
+import { readDocument, storeDocument } from '../apps/api/src/services/document-storage.js';
 
 const ids = {
   forest: '10000000-0000-4000-8000-000000000001', mill: '10000000-0000-4000-8000-000000000002', buyerOrg: '10000000-0000-4000-8000-000000000003',
   operator: '20000000-0000-4000-8000-000000000001', reviewer: '20000000-0000-4000-8000-000000000002', buyerUser: '20000000-0000-4000-8000-000000000003',
+  millOperator: '20000000-0000-4000-8000-000000000004',
   plot: '30000000-0000-4000-8000-000000000001', document: '40000000-0000-4000-8000-000000000001', parameter: '50000000-0000-4000-8000-000000000001',
 } as const;
 const origin = (n: number) => `60000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -18,6 +20,15 @@ const synthetic = { label: 'SIMULADA', source: 'Fixture sintética ForestTrace',
 const content = (text: string) => Buffer.from(text, 'utf8');
 
 async function upsertDemoData() {
+  const documentKey = `${ids.document}.bin`;
+  const documentBytes = content('DOCUMENTO FICTÍCIO - NÃO É AUTORIZAÇÃO');
+  const existingBytes = await readDocument(documentKey).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (existingBytes && sha256Bytes(existingBytes) !== sha256Bytes(documentBytes)) throw new Error('Documento sintético existente foi alterado; não será sobrescrito pelo seed.');
+  if (!existingBytes) await storeDocument(documentKey, documentBytes);
+  await database.$transaction(async prisma => {
   const orgs = [
     { id: ids.forest, name: 'Floresta Demo (sintética)', role: 'OPERATOR', country: 'BR', state: 'AM', municipality: 'Manaus', data_provenance: synthetic },
     { id: ids.mill, name: 'Serraria Demo (sintética)', role: 'PROCESSOR', country: 'BR', state: 'AM', municipality: 'Itacoatiara', data_provenance: synthetic },
@@ -28,13 +39,14 @@ async function upsertDemoData() {
     { id: ids.operator, name: 'Operadora Demo (autora)', organization_id: ids.forest, roles: ['OPERATOR', 'AUDITOR'] },
     { id: ids.reviewer, name: 'Auditora Demo (revisora distinta)', organization_id: ids.forest, roles: ['AUDITOR'] },
     { id: ids.buyerUser, name: 'Comprador Demo', organization_id: ids.buyerOrg, roles: ['BUYER'] },
+    { id: ids.millOperator, name: 'Serraria Demo (recebedora)', organization_id: ids.mill, roles: ['OPERATOR'] },
   ];
   for (const u of users) await prisma.user.upsert({ where: { id: u.id }, create: u, update: u });
-  for (const [user_id, organization_id, role] of [[ids.operator, ids.forest, 'OPERATOR'], [ids.operator, ids.forest, 'AUDITOR'], [ids.reviewer, ids.forest, 'AUDITOR'], [ids.buyerUser, ids.buyerOrg, 'BUYER']] as const) {
+  for (const [user_id, organization_id, role] of [[ids.operator, ids.forest, 'OPERATOR'], [ids.operator, ids.forest, 'AUDITOR'], [ids.reviewer, ids.forest, 'AUDITOR'], [ids.buyerUser, ids.buyerOrg, 'BUYER'], [ids.millOperator, ids.mill, 'OPERATOR']] as const) {
     await prisma.membership.upsert({ where: { user_id_organization_id_role: { user_id, organization_id, role } }, create: { user_id, organization_id, role }, update: {} });
   }
   await prisma.plot.upsert({ where: { id: ids.plot }, create: { id: ids.plot, organization_id: ids.forest, state: 'AM', municipality: 'Manaus', declared_property: 'Parcela demonstrativa fictícia', geometry: sampleGeo, geometry_hash: sha256Canonical(sampleGeo), geometry_date: new Date('2026-11-05'), area_ha: '1.2', data_provenance: synthetic, created_by_user_id: ids.operator }, update: {} });
-  await prisma.document.upsert({ where: { id: ids.document }, create: { id: ids.document, organization_id: ids.forest, type: 'AUTHORIZATION', name: 'Autorização de demonstração (sintética)', storage_key: 'demo://authorization/foresttrace-001', content_hash: sha256Bytes(content('DOCUMENTO FICTÍCIO - NÃO É AUTORIZAÇÃO')), content_type: 'text/plain', data_provenance: 'SIMULADA', source: 'Fixture sintética ForestTrace', visibility: 'PRIVATE', allowed_organization_ids: [], created_by_user_id: ids.operator }, update: {} });
+  await prisma.document.upsert({ where: { id: ids.document }, create: { id: ids.document, organization_id: ids.forest, type: 'AUTHORIZATION', name: 'Autorização de demonstração (sintética)', storage_key: documentKey, content_hash: sha256Bytes(documentBytes), content_type: 'text/plain', data_provenance: 'SIMULADA', source: 'Fixture sintética ForestTrace', visibility: 'PRIVATE', allowed_organization_ids: [], created_by_user_id: ids.operator }, update: { storage_key: documentKey } });
   await prisma.conversionParameter.upsert({ where: { id: ids.parameter }, create: { id: ids.parameter, input_product: 'tora', output_product: 'serrado', coefficient: '0.35', regulation_reference: 'Parâmetro demonstrativo; vigência não confirmada', source_url: 'https://example.invalid/demo-crv', version: 'demo-tora-serrado-v1', valid_from: new Date('2026-01-01'), data_provenance: 'SIMULADA' }, update: {} });
 
   for (let i = 1; i <= 4; i++) {
@@ -50,7 +62,7 @@ async function upsertDemoData() {
     for (let o = 0; o < outputVolumes.length; o++) {
       const outId = product(i * 10 + o + 1); const outVolume = outputVolumes[o]!; const outCode = `DEMO-${i}-${o + 1}`;
       await prisma.productLot.upsert({ where: { id: outId }, create: { id: outId, code: outCode, organization_id: ids.forest, transformation_id: transformId, product: 'madeira serrada', species_common: 'angelim-vermelho', species_scientific: 'Dinizia excelsa', volume_m3: outVolume, assessment_scope: 'DEMONSTRATIVO', data_provenance: synthetic, created_by_user_id: ids.operator }, update: {} });
-      await prisma.lotProvenance.create({ data: { product_lot_id: outId, origin_lot_id: i === 4 ? null : lotId, volume_m3: outVolume, fraction: '1' } });
+      if (!await prisma.lotProvenance.findFirst({ where: { product_lot_id: outId } })) await prisma.lotProvenance.create({ data: { product_lot_id: outId, origin_lot_id: i === 4 ? null : lotId, volume_m3: outVolume, fraction: '1' } });
       await prisma.balance.upsert({ where: { lot_id_organization_id: { lot_id: outId, organization_id: ids.forest } }, create: { lot_id: outId, organization_id: ids.forest, available_m3: i === 2 ? '0' : outVolume, quarantined_m3: i === 2 ? outVolume : '0' }, update: {} });
     }
     const needsAlert = i === 2 || i === 4;
@@ -73,6 +85,7 @@ async function upsertDemoData() {
     await prisma.streamHead.upsert({ where: { stream_id: lotId }, create: { stream_id: lotId, sequence: 2, event_hash: previousHash }, update: { sequence: 2, event_hash: previousHash } });
   }
   console.log('Fixtures A/B/C + origem desconhecida sincronizados; todos os dados estão marcados SIMULADA.');
+  }, { timeout: 60_000 });
 }
 
-upsertDemoData().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());
+upsertDemoData().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => database.$disconnect());

@@ -34,7 +34,7 @@ export function assessConversion(input: {
   if (consumed.lte(0) || produced.lt(0)) {
     throw new Error('R10 requer volumes decimais válidos e entrada positiva.');
   }
-  const parameterDateValid = !!input.assessmentDate && !!input.parameterValidFrom && !!input.parameterValidUntil && input.assessmentDate >= input.parameterValidFrom && input.assessmentDate <= input.parameterValidUntil;
+  const parameterDateValid = !!input.assessmentDate && !!input.parameterValidFrom && input.assessmentDate >= input.parameterValidFrom && (!input.parameterValidUntil || input.assessmentDate <= input.parameterValidUntil);
   if (!input.multiplier || !input.parameterVersion || !input.parameterSource || !parameterDateValid) result = 'PENDENTE';
   if (input.exception) {
     const e = input.exception;
