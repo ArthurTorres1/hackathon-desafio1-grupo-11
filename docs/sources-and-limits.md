@@ -57,3 +57,6 @@ O balanço `entrada − serrado` não mede separadamente resíduos, serragem e p
 ### Interpretação das saídas demonstrativas
 
 `max(0, serrado / CRV_aplicado − entrada)` expressa volume adicional equivalente necessário sob o coeficiente adotado. Divergência matemática não comprova injeção de madeira ilegal, fraude, origem física ou intenção. A saída deve indicar inconsistência para revisão com fonte, valores e parâmetro, sem acusação ou score probabilístico arbitrário. Área efetiva ausente e denominadores nulos mantêm a métrica não avaliada; entradas incoerentes são rejeitadas, sem aprovação por divisão impossível. Esses cálculos não criam saldo, não alteram autorização e não promovem passaporte demonstrativo a pronto.
+## Persistência de requisitos — continuação em 06/11/2026
+
+O motor e a API normativa versionados estão descritos em [regulatory-persistence.md](regulatory-persistence.md). Eles selecionam requisitos declarados por jurisdição/fase/data/produto/modalidade/sistema e preservam lacunas e conflitos. O inventário CSV não foi convertido em regras confirmadas. Os perfis usados nos testes são sintéticos e isolados no banco de testes; não representam confirmação de norma ou consulta oficial. A rota candidata AM→SP continua pendente de checklist e validação das fontes pertinentes.

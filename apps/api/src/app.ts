@@ -25,6 +25,15 @@ import { fileURLToPath } from 'node:url';
 import { registerWhispRoutes } from './services/whisp-routes.js';
 import { registerCorrectionRoutes } from './services/corrections.js';
 import { registerForestUtilizationRoutes } from './services/forest-utilization-routes.js';
+import { registerPlotReadRoutes } from './modules/plots.js';
+import { registerOriginLotReadRoutes } from './modules/origin-lots.js';
+import { registerResponseContracts } from './services/response-contracts.js';
+import { registerEvidenceDiagnosticRoutes } from './services/evidence-diagnostic.js';
+import { registerRegulatoryRoutes, regulatorySummaryForProduct } from './services/regulatory-routes.js';
+import { registerDeliveryRoutes } from './services/delivery-routes.js';
+import { bindContextualReview, effectiveReviewedChecks } from './services/contextual-review.js';
+import { aggregateCheckDimensions } from './services/review-readiness.js';
+import { buildEvidenceBundle } from './services/evidence-bundle.js';
 import { appendAuditEvent } from './services/audit-events.js';
 import { loadProductAncestry, plotGeometrySha } from './services/ancestry.js';
 import { verifyStoredPassport } from './services/passport-integrity.js';
@@ -32,6 +41,8 @@ import { ancestryDigests } from './services/ancestry-digests.js';
 import { canAccessCommercialDocument, canAccessCommercialPassport, changeDocumentGrant } from './services/commercial-access.js';
 import { reassessConversionWithException } from './services/conversion-review.js';
 import { executeIdempotent, IdempotencyKeyRequired, requireIdempotencyKey } from './services/idempotency.js';
+import { assertDistinctLots, debitAvailable, lockBalances, RECEIPT_POLICY } from './services/balances.js';
+import { effectiveMembershipRoles } from './auth/memberships.js';
 
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 const safeEqual = (a: string, b: string) => {
@@ -39,13 +50,7 @@ const safeEqual = (a: string, b: string) => {
   return left.length === right.length && timingSafeEqual(left, right);
 };
 async function appendEvent(tx: Prisma.TransactionClient, input: { streamId: string; entityType: string; entityId: string; type: string; actorId: string; payload: unknown }) {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.streamId}, 0))`;
-  const head = await tx.streamHead.upsert({ where: { stream_id: input.streamId }, create: { stream_id: input.streamId }, update: {} });
-  const timestamp = new Date(); const sequence = head.sequence + 1;
-  const body = { event_id: randomUUID(), stream_id: input.streamId, sequence, entity: input.entityType, entity_id: input.entityId, type: input.type, actor_id: input.actorId, timestamp: timestamp.toISOString(), payload: input.payload, previous_hash: head.event_hash };
-  const eventHash = sha256Canonical(body);
-  await tx.custodyEvent.create({ data: { event_id: body.event_id, stream_id: body.stream_id, sequence, entity_type: body.entity, entity_id: body.entity_id, type: body.type, actor_id: body.actor_id, timestamp, payload: body.payload as object, previous_hash: body.previous_hash, event_hash: eventHash } });
-  await tx.streamHead.update({ where: { stream_id: input.streamId }, data: { sequence, event_hash: eventHash } });
+  await appendAuditEvent(tx, input);
 }
 async function assertNoR19(tx: Prisma.TransactionClient, entityIds: string[]) {
   const ids = [...new Set(entityIds.filter(Boolean))];
@@ -83,30 +88,56 @@ function setError(app: FastifyInstance) {
 }
 
 export async function buildServer(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: { redact: ['req.headers.cookie', 'req.headers.authorization', 'req.headers.x-csrf-token'] }, bodyLimit: 15_000_000, genReqId: () => randomBytes(12).toString('hex') });
+  const app = Fastify({ logger: {
+    redact: ['req.headers.cookie', 'req.headers.authorization', 'req.headers.x-csrf-token'],
+    serializers: { req: (request: FastifyRequest) => ({ method: request.method, url: request.url.split('?')[0] }) },
+  }, bodyLimit: 15_000_000, genReqId: () => randomBytes(12).toString('hex') });
   setError(app);
   await app.register(cookie);
-  const allowedOrigins = (process.env.WEB_ORIGIN ?? 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(v => v.trim()).filter(Boolean);
+  const allowedOrigins = [...new Set([
+    ...(process.env.WEB_ORIGIN ?? 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(v => v.trim()).filter(Boolean),
+    new URL(process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`).origin,
+  ])];
   await app.register(cors, { origin: (origin, cb) => cb(null, !origin || allowedOrigins.includes(origin)), credentials: true });
   await app.register(swagger, { openapi: { info: { title: 'ForestTrace API', version: '1.0.0', description: 'Trilha demonstrativa de evidências; não certifica legalidade.' }, servers: [{ url: '/' }] } });
   await app.register(swaggerUi, { routePrefix: '/docs' });
+  registerResponseContracts(app);
   app.get('/openapi.json', async () => app.swagger());
 
-  app.get('/health', async () => ({ status: 'ok', service: 'foresttrace-api' }));
+  app.get('/health', async (_request, reply) => {
+    try {
+      await prisma.$queryRaw`SELECT PostGIS_Version()`;
+      return { status: 'ok', service: 'foresttrace-api', database: 'ok', postgis: 'ok' };
+    } catch {
+      return reply.code(503).send({ status: 'unavailable', service: 'foresttrace-api', database: 'unavailable' });
+    }
+  });
   app.get('/api/v1/auth/personas', async (_request, reply) => {
     if (process.env.DEMO_MODE !== 'true') return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Rota não encontrada.', request_id: reply.request.id } });
-    return { personas: await prisma.user.findMany({ select: { id: true, name: true, roles: true, organization: { select: { id: true, name: true, role: true, state: true } } }, orderBy: { name: 'asc' } }) };
+    const users = await prisma.user.findMany({ select: { id: true, name: true, organization_id: true, roles: true, organization: { select: { id: true, name: true, role: true, state: true } } }, orderBy: { name: 'asc' } });
+    const memberships = await prisma.membership.findMany({ where: { user_id: { in: users.map(user => user.id) } } });
+    return { personas: users.map(user => ({ id: user.id, name: user.name, roles: effectiveMembershipRoles(user, memberships), organization: user.organization })).filter(user => user.roles.length > 0) };
   });
   app.post<{ Body: { user_id: string } }>('/api/v1/auth/session', { schema: { body: Type.Object({ user_id: Type.String({ format: 'uuid' }) }) } }, async (request, reply) => {
     if (process.env.DEMO_MODE !== 'true') return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Rota não encontrada.', request_id: request.id } });
+    if (request.headers.origin && !allowedOrigins.includes(request.headers.origin)) {
+      await logAccess(request, null, false, 'ORIGIN_INVALID');
+      return reply.code(403).send({ error: { code: 'CSRF_INVALID', message: 'Origem não autorizada.', request_id: request.id } });
+    }
     const user = await prisma.user.findUnique({ where: { id: request.body?.user_id }, include: { organization: true } });
     if (!user) return reply.code(404).send({ error: { code: 'PERSONA_NOT_FOUND', message: 'Perfil de demonstração não encontrado.', request_id: request.id } });
+    const memberships = await prisma.membership.findMany({ where: { user_id: user.id, organization_id: user.organization_id } });
+    const effectiveRoles = effectiveMembershipRoles(user, memberships);
+    if (!effectiveRoles.length) {
+      await logAccess(request, user.id, false, 'MEMBERSHIP_REQUIRED');
+      return reply.code(403).send({ error: { code: 'MEMBERSHIP_REQUIRED', message: 'Vínculo ativo com a organização necessário.', request_id: request.id } });
+    }
     const token = randomBytes(32).toString('base64url'); const csrf = randomBytes(24).toString('base64url');
     const expires = new Date(Date.now() + 8 * 60 * 60 * 1000);
     await prisma.session.create({ data: { token_hash: sha(token), csrf_hash: sha(csrf), user_id: user.id, expires_at: expires } });
     reply.setCookie('foresttrace_session', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', expires });
     reply.setCookie('foresttrace_csrf', csrf, { httpOnly: false, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', expires });
-    return { user: { id: user.id, name: user.name, roles: user.roles, organization: { id: user.organization.id, name: user.organization.name } }, csrf_token: csrf, expires_at: expires.toISOString() };
+    return { user: { id: user.id, name: user.name, roles: effectiveRoles, organization: { id: user.organization.id, name: user.organization.name } }, csrf_token: csrf, expires_at: expires.toISOString() };
   });
   app.delete('/api/v1/auth/session', async (request, reply) => {
     const raw = request.cookies.foresttrace_session;
@@ -129,7 +160,14 @@ export async function buildServer(): Promise<FastifyInstance> {
       const cookieToken = request.cookies.foresttrace_csrf ?? ''; csrfHeader = String(request.headers['x-csrf-token'] ?? '');
       if (!csrfHeader || !safeEqual(sha(cookieToken), session.csrf_hash) || !safeEqual(sha(csrfHeader), session.csrf_hash)) { await logAccess(request, session.user_id, false, 'CSRF_INVALID'); return reply.code(403).send({ error: { code: 'CSRF_INVALID', message: 'Token de segurança inválido.', request_id: request.id } }); }
     }
-    request.authUser = { id: session.user.id, organization_id: session.user.organization_id, roles: session.user.roles };
+    const memberships = await prisma.membership.findMany({ where: { user_id: session.user.id, organization_id: session.user.organization_id } });
+    const effectiveRoles = effectiveMembershipRoles(session.user, memberships);
+    // Revoked memberships stop existing sessions immediately, while allowing secure logout.
+    if (!effectiveRoles.length && !(path === '/api/v1/auth/session' && request.method === 'DELETE')) {
+      await logAccess(request, session.user_id, false, 'MEMBERSHIP_REQUIRED');
+      return reply.code(403).send({ error: { code: 'MEMBERSHIP_REQUIRED', message: 'Vínculo ativo com a organização necessário.', request_id: request.id } });
+    }
+    request.authUser = { id: session.user.id, organization_id: session.user.organization_id, roles: effectiveRoles };
     request.csrfToken = csrfHeader;
     const grantMutation = ['POST', 'DELETE'].includes(request.method) && /^\/api\/v1\/(documents|passports)\/[^/]+\/grants(?:\/[^/]+)?$/.test(path);
     if (request.method === 'POST' || grantMutation) {
@@ -140,8 +178,8 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
     }
     if (grantMutation || request.method === 'POST' && !path.startsWith('/api/v1/audit-cases/')) {
-      const roles = path === '/api/v1/documents' || path === '/api/v1/conversion-exceptions' || path === '/api/v1/calculations/forest-utilization' || grantMutation ? ['OPERATOR', 'AUDITOR'] : ['OPERATOR'];
-      if (!session.user.roles.some(role => roles.includes(role))) {
+      const roles = path.startsWith('/api/v1/regulatory/') ? ['OPERATOR', 'AUDITOR', 'REGULATOR'] : path === '/api/v1/documents' || path === '/api/v1/conversion-exceptions' || path === '/api/v1/calculations/forest-utilization' || grantMutation ? ['OPERATOR', 'AUDITOR'] : ['OPERATOR'];
+      if (!effectiveRoles.some(role => roles.includes(role))) {
         await logAccess(request, session.user_id, false, 'ROLE_REQUIRED');
         return reply.code(403).send({ error: { code: 'ROLE_REQUIRED', message: 'Perfil sem permissão para esta operação.', request_id: request.id } });
       }
@@ -168,7 +206,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       prisma.conversionParameter.findMany({ orderBy: { valid_from: 'desc' } }),
       prisma.document.findMany({ where: { organization_id: orgId }, select: { id: true, name: true, type: true, content_hash: true, data_provenance: true, visibility: true, created_at: true }, orderBy: { created_at: 'desc' } }),
     ]);
-    return { user: { id: session.id, name: session.name, roles: session.roles, organization: { id: orgId, name: session.organization.name, state: session.organization.state } }, organizations, plots, origin_lots: lots.map(lot => ({ ...lot, available_m3: balances.find(b => b.lot_id === lot.id)?.available_m3 ?? '0' })), balances, conversion_parameters: parameters, documents, harvests: await prisma.harvest.findMany({ where: { organization_id: orgId }, orderBy: { created_at: 'desc' } }), shipments, transformations, product_lots: products, checks, audit_cases: cases, passports, metrics: { plot_count: plots.length, origin_lot_count: lots.length, shipment_count: shipments.length, transformation_count: transformations.length, open_alert_count: cases.filter(c => ['ABERTO', 'EM_ANALISE', 'MANTIDO_PENDENTE'].includes(c.status)).length }, limitations: ['Dados demonstrativos são sintéticos e permanecem MISSING_EVIDENCE.'] };
+    return { user: { id: session.id, name: session.name, roles: current.roles, organization: { id: orgId, name: session.organization.name, state: session.organization.state } }, organizations, plots, origin_lots: lots.map(lot => ({ ...lot, available_m3: balances.find(b => b.lot_id === lot.id)?.available_m3 ?? '0' })), balances, conversion_parameters: parameters, documents, harvests: await prisma.harvest.findMany({ where: { organization_id: orgId }, orderBy: { created_at: 'desc' } }), shipments, transformations, product_lots: products, checks, audit_cases: cases, passports, metrics: { plot_count: plots.length, origin_lot_count: lots.length, shipment_count: shipments.length, transformation_count: transformations.length, open_alert_count: cases.filter(c => ['ABERTO', 'EM_ANALISE', 'MANTIDO_PENDENTE'].includes(c.status)).length }, limitations: ['Dados demonstrativos são sintéticos e permanecem MISSING_EVIDENCE.'] };
   });
 
   app.post<{ Body: { name: string; type: string; content_base64: string; source: string; data_provenance: string; visibility: string; fiscal_key?: string } }>('/api/v1/documents', { schema: { body: DocumentCreateSchema } }, async (request, reply) => {
@@ -289,6 +327,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   app.post<{ Body: Record<string, unknown> }>('/api/v1/plots', { schema: { body: PlotCreateSchema } }, async (request, reply) => {
     const body = request.body; const actor = request.authUser!;
+    if (body.organization_id !== actor.organization_id) return reply.code(403).send({ error: { code: 'R20', message: 'A parcela deve pertencer à organização autenticada.', request_id: request.id } });
     const geo = body.geometry as { type?: string; coordinates?: unknown };
     if (!geo || typeof body.state !== 'string' || !Array.isArray(geo.coordinates)) {
       return reply.code(422).send({ error: { code: 'VALIDATION_ERROR', message: 'Informe parcela, UF, município, imóvel e polígono GeoJSON.', fields: ['geometry', 'state'], request_id: request.id } });
@@ -334,12 +373,21 @@ export async function buildServer(): Promise<FastifyInstance> {
     const b = request.body; const actor = request.authUser!; let volume: Decimal;
     try { volume = new Decimal(String(b.volume_m3)); } catch { return reply.code(422).send({ error: { code: 'VALIDATION_ERROR', message: 'Volume decimal inválido.', request_id: request.id } }); }
     if (!b.origin_lot_id || !volume.isFinite() || volume.lte(0) || !b.start_date || !b.end_date) return reply.code(422).send({ error: { code: 'VALIDATION_ERROR', message: 'Informe lote, período e volume positivo.', request_id: request.id } });
-    const requestPayload = JSON.stringify(b); const hash = sha(requestPayload);
+    if (String(b.start_date) > String(b.end_date)) return reply.code(422).send({ error: { code: 'R06', message: 'O fim do corte deve ser posterior ou igual ao início.', request_id: request.id } });
+    const hash = sha256Canonical(b);
     const lot = await prisma.originLot.findFirst({ where: { id: String(b.origin_lot_id), organization_id: actor.organization_id }, include: { permits: true } });
     if (!lot) return reply.code(404).send({ error: { code: 'LOT_NOT_FOUND', message: 'Lote não encontrado nesta organização.', request_id: request.id } });
     const result = await executeIdempotent<unknown>(prisma, { actorId: actor.id, operation: 'POST /api/v1/harvests', key: request.idempotencyKey!, payload: b }, async tx => {
-      const current = await tx.originLot.findUniqueOrThrow({ where: { id: lot.id } });
+      const current = await tx.originLot.findUniqueOrThrow({ where: { id: lot.id }, include: { permits: true } });
       await assertNoR19(tx, [current.id]);
+      const outsideValidity = String(b.start_date) < current.valid_from.toISOString().slice(0, 10) || String(b.end_date) > current.valid_until.toISOString().slice(0, 10)
+        || !current.permits.some(permit => String(b.start_date) >= permit.valid_from.toISOString().slice(0, 10) && String(b.end_date) <= permit.valid_until.toISOString().slice(0, 10));
+      if (outsideValidity) {
+        const pending = await tx.pendingOperationRequest.create({ data: { organization_id: actor.organization_id, operation: 'HARVEST_OUTSIDE_AUTHORIZATION_PERIOD', payload: b as object, payload_hash: hash, created_by_user_id: actor.id } });
+        const check = await tx.check.create({ data: { organization_id: actor.organization_id, entity_type: 'ORIGIN_LOT', entity_id: lot.id, rule_id: 'R04', rule_version: '1', name: 'Vigência da autorização', description: 'Corte fora da vigência informada ou sem autorização vinculada.', source: { type: 'PERMIT_DECLARATION' }, modality: 'DEMONSTRATIVO', dimension: 'documentary_check', status: 'ALERTA', technical_severity: 'HIGH', message: 'O período do corte não está coberto pela autorização vinculada.', suggested_action: 'Conferir período e autorização antes de confirmar o corte.', values: { start_date: String(b.start_date), end_date: String(b.end_date) }, assessment_scope: current.assessment_scope } });
+        await tx.auditCase.create({ data: { organization_id: actor.organization_id, check_id: check.id, entity_type: 'ORIGIN_LOT', entity_id: lot.id, created_by_user_id: actor.id, rule_id: 'R04' } });
+        return { statusCode: 202, body: { status: 'PENDENTE_REVISAO', pending_operation: pending, check: 'R04' } };
+      }
       const remaining = new Decimal(current.authorized_volume_m3.toString()).minus(current.harvested_volume_m3.toString());
       if (volume.gt(remaining)) {
         const pending = await tx.pendingOperationRequest.create({ data: { organization_id: actor.organization_id, operation: 'HARVEST_OVER_AUTHORIZATION', payload: b as object, payload_hash: hash, created_by_user_id: actor.id } });
@@ -365,15 +413,14 @@ export async function buildServer(): Promise<FastifyInstance> {
     if (String(b.sender_organization_id) !== actor.organization_id || !Array.isArray(b.items) || !b.items.length) return reply.code(403).send({ error: { code: 'ORGANIZATION_SCOPE_DENIED', message: 'Remessa deve ser criada pelo remetente autenticado.', request_id: request.id } });
     try {
       const result = await executeIdempotent(prisma, { actorId: actor.id, operation: 'POST /api/v1/shipments', key: request.idempotencyKey!, payload: b }, async tx => {
+        assertDistinctLots(b.items as Array<{ lot_id: string }>);
+        await lockBalances(tx, actor.organization_id, (b.items as Array<{ lot_id: string }>).map(item => item.lot_id));
         const items: Array<{ lot_id: string; volume_m3: string }> = [];
         for (const raw of b.items as Array<Record<string, unknown>>) {
           const vol = new Decimal(String(raw.volume_m3));
           if (!vol.isFinite() || vol.lte(0)) throw Object.assign(new Error('Volume inválido.'), { code: 'VOLUME_INVALID' });
           await assertNoR19(tx, [String(raw.lot_id)]);
-          const balance = await tx.balance.findUnique({ where: { lot_id_organization_id: { lot_id: String(raw.lot_id), organization_id: actor.organization_id } } });
-          if (!balance || new Decimal(balance.available_m3.toString()).lt(vol)) throw Object.assign(new Error('Saldo disponível insuficiente.'), { code: 'R08' });
-          const upd = await tx.balance.updateMany({ where: { id: balance.id, available_m3: { gte: vol.toFixed() } }, data: { available_m3: { decrement: vol.toFixed() }, reserved_m3: { increment: vol.toFixed() } } });
-          if (!upd.count) throw Object.assign(new Error('Saldo alterado por operação concorrente.'), { code: 'R08' });
+          await debitAvailable(tx, actor.organization_id, String(raw.lot_id), vol.toFixed(), true);
           items.push({ lot_id: String(raw.lot_id), volume_m3: vol.toFixed() });
         }
         const shipment = await tx.shipment.create({ data: { sender_id: actor.organization_id, recipient_id: String(b.recipient_organization_id), carrier: String(b.transporter), origin_state: String(b.origin_state), destination_state: String(b.destination_state), route_states: Array.isArray(b.route_states) ? b.route_states.map(String) : [], official_system: String(b.official_system), document_ids: Array.isArray(b.document_ids) ? b.document_ids.map(String) : [], declared_at: new Date(), created_by_user_id: actor.id, items: { create: items } }, include: { items: true } });
@@ -390,6 +437,11 @@ export async function buildServer(): Promise<FastifyInstance> {
     const result = await executeIdempotent(prisma, { actorId: actor.id, operation: 'POST /api/v1/shipments/:id/dispatch', key: request.idempotencyKey!, payload: { params: request.params, body: request.body } }, async tx => {
       const shipment = await tx.shipment.findFirst({ where: { id: request.params.id, sender_id: actor.organization_id }, include: { items: true } });
       if (!shipment || shipment.status !== 'CREATED') throw Object.assign(new Error('Remessa inexistente ou não pode ser expedida.'), { statusCode: 409, code: 'SHIPMENT_STATE_CONFLICT' });
+      const dispatchedAt = new Date(request.body.occurred_at);
+      if (dispatchedAt < shipment.declared_at) throw Object.assign(new Error('A expedição não pode anteceder a criação da remessa.'), { statusCode: 422, code: 'R06' });
+      const latestHarvest = await tx.harvest.findFirst({ where: { origin_lot_id: { in: shipment.items.map(item => item.lot_id) } }, orderBy: { period_end: 'desc' } });
+      if (latestHarvest && dispatchedAt < latestHarvest.period_end) throw Object.assign(new Error('A expedição não pode anteceder o corte informado.'), { statusCode: 422, code: 'R06' });
+      await lockBalances(tx, actor.organization_id, shipment.items.map(item => item.lot_id));
       await assertNoR19(tx, [shipment.id, ...shipment.items.map(item => item.lot_id)]);
       for (const item of shipment.items) {
         await tx.balance.update({ where: { lot_id_organization_id: { lot_id: item.lot_id, organization_id: actor.organization_id } }, data: { reserved_m3: { decrement: item.volume_m3 }, quarantined_m3: { increment: item.volume_m3 } } });
@@ -407,6 +459,7 @@ export async function buildServer(): Promise<FastifyInstance> {
     const result = await executeIdempotent(prisma, { actorId: actor.id, operation: 'POST /api/v1/shipments/:id/receive', key: request.idempotencyKey!, payload: { params: request.params, body: request.body } }, async tx => {
       const shipment = await tx.shipment.findFirst({ where: { id: request.params.id, recipient_id: actor.organization_id }, include: { items: true } });
       if (!shipment || shipment.status !== 'DISPATCHED') throw Object.assign(new Error('Remessa inexistente ou não pode ser recebida.'), { statusCode: 409, code: 'SHIPMENT_STATE_CONFLICT' });
+      if (!shipment.dispatched_at || new Date(request.body.occurred_at) < shipment.dispatched_at) throw Object.assign(new Error('O recebimento não pode anteceder a expedição.'), { statusCode: 422, code: 'R06' });
       await assertNoR19(tx, [shipment.id, ...shipment.items.map(item => item.lot_id)]);
       const receivedIds = request.body.items.map(item => item.lot_id);
       if (new Set(receivedIds).size !== receivedIds.length || receivedIds.length !== shipment.items.length || shipment.items.some(item => !receivedIds.includes(item.lot_id))) throw Object.assign(new Error('Informe cada lote da remessa uma única vez.'), { statusCode: 422 });
@@ -415,14 +468,25 @@ export async function buildServer(): Promise<FastifyInstance> {
       for (const item of shipment.items) {
         const received = receivedByLot.get(item.lot_id) ?? new Decimal(0); const dispatched = new Decimal(item.volume_m3.toString()); const diff = dispatched.minus(received).abs();
         const current = await tx.balance.findUnique({ where: { lot_id_organization_id: { lot_id: item.lot_id, organization_id: shipment.sender_id } } });
-        if (current) await tx.balance.update({ where: { id: current.id }, data: { quarantined_m3: { decrement: item.volume_m3 } } });
+        if (!current) throw Object.assign(new Error('Saldo em trânsito ausente; recebimento exige reconciliação.'), { statusCode: 409, code: 'R08' });
+        // Keep an unreceived difference in quarantine until reconciliation, instead of losing it.
+        await tx.balance.update({ where: { id: current.id }, data: { quarantined_m3: { decrement: received.toFixed() } } });
         await tx.balance.upsert({ where: { lot_id_organization_id: { lot_id: item.lot_id, organization_id: shipment.recipient_id } }, create: { lot_id: item.lot_id, organization_id: shipment.recipient_id, available_m3: received.toFixed() }, update: { available_m3: { increment: received.toFixed() } } });
+        if (received.gt(0)) {
+          await tx.balanceMovement.createMany({ data: [
+            { lot_id: item.lot_id, organization_id: shipment.sender_id, entity_type: 'SHIPMENT', entity_id: shipment.id, action: 'RECEIPT_DEBIT', volume_m3: received.toFixed() },
+            { lot_id: item.lot_id, organization_id: shipment.recipient_id, entity_type: 'SHIPMENT', entity_id: shipment.id, action: 'RECEIPT_CREDIT', volume_m3: received.toFixed() },
+          ] });
+        }
         await tx.shipmentItem.update({ where: { id: item.id }, data: { received_volume_m3: received.toFixed() } });
         checks.push({ lot_id: item.lot_id, difference_m3: diff.toFixed(), status: diff.isZero() ? 'PASSOU' : 'ALERTA' });
       }
       const saved = await tx.shipment.update({ where: { id: shipment.id }, data: { status: checks.every(c => c.status === 'PASSOU') ? 'RECEIVED' : 'RECEIVED_WITH_VARIANCE', received_at: new Date(request.body.occurred_at), received_by_user_id: actor.id } });
-      await appendEvent(tx, { streamId: shipment.id, entityType: 'SHIPMENT', entityId: shipment.id, type: 'SHIPMENT_RECEIVED', actorId: actor.id, payload: { occurred_at: request.body.occurred_at, checks } });
-      if (checks.some(c => c.status === 'ALERTA')) await tx.check.create({ data: { organization_id: shipment.recipient_id, entity_type: 'SHIPMENT', entity_id: shipment.id, rule_id: 'R09', rule_version: '1', name: 'Divergência de recebimento', description: 'Quantidade recebida difere da expedida; tolerância zero.', source: { type: 'SHIPMENT_DECLARATION' }, modality: 'DEMONSTRATIVO', dimension: 'chain_of_custody_check', status: 'ALERTA', technical_severity: 'MEDIUM', message: 'R09 detectou divergência entre expedição e recebimento.', suggested_action: 'Investigar e anexar evidência.', values: { checks }, assessment_scope: 'DEMONSTRATIVO' } });
+      await appendEvent(tx, { streamId: shipment.id, entityType: 'SHIPMENT', entityId: shipment.id, type: 'SHIPMENT_RECEIVED', actorId: actor.id, payload: { occurred_at: request.body.occurred_at, checks, receipt_policy: RECEIPT_POLICY } });
+      if (checks.some(c => c.status === 'ALERTA')) {
+        const check = await tx.check.create({ data: { organization_id: shipment.recipient_id, entity_type: 'SHIPMENT', entity_id: shipment.id, rule_id: 'R09', rule_version: RECEIPT_POLICY.version, name: 'Divergência de recebimento', description: 'Quantidade recebida difere da expedida; tolerância zero.', source: { type: 'SHIPMENT_DECLARATION' }, modality: 'DEMONSTRATIVO', dimension: 'chain_of_custody_check', status: 'ALERTA', technical_severity: 'MEDIUM', message: 'R09 detectou divergência entre expedição e recebimento.', suggested_action: 'Investigar e anexar evidência.', values: { checks, receipt_policy: RECEIPT_POLICY }, assessment_scope: 'DEMONSTRATIVO' } });
+        await tx.auditCase.create({ data: { organization_id: shipment.recipient_id, check_id: check.id, entity_type: 'SHIPMENT', entity_id: shipment.id, created_by_user_id: actor.id, rule_id: 'R09' } });
+      }
       return { statusCode: 200, body: { shipment: saved, checks } };
     });
     return reply.code(result.statusCode).send(result.body);
@@ -434,6 +498,8 @@ export async function buildServer(): Promise<FastifyInstance> {
     try {
       const result = await executeIdempotent(prisma, { actorId: actor.id, operation: 'POST /api/v1/transformations', key: request.idempotencyKey!, payload: b }, async tx => {
         const inputs = b.inputs as Array<{ lot_id: string; volume_m3: string }>;
+        assertDistinctLots(inputs);
+        await lockBalances(tx, actor.organization_id, inputs.map(input => input.lot_id));
         const outputs = b.outputs as Array<{ client_ref: string; product: string; volume_m3: string; allocations: Array<{ origin_lot_id: string | null; volume_m3: string }> }>;
         const totalInput = inputs.reduce((sum, row) => sum.plus(row.volume_m3), new Decimal(0));
         const totalOutput = outputs.reduce((sum, row) => sum.plus(row.volume_m3), new Decimal(0));
@@ -446,6 +512,10 @@ export async function buildServer(): Promise<FastifyInstance> {
         ]);
         await assertNoR19(tx, [...inputIds, ...ancestors.map(row => row.origin_lot_id ?? '')]);
         const species = [...origins, ...products];
+        for (const origin of origins) {
+          const receipt = await tx.shipment.findFirst({ where: { recipient_id: actor.organization_id, status: { in: ['RECEIVED', 'RECEIVED_WITH_VARIANCE'] }, received_at: { lte: new Date(String(b.occurred_at)) }, items: { some: { lot_id: origin.id, received_volume_m3: { gt: 0 } } } } });
+          if (!receipt) throw Object.assign(new Error('A transformação exige entrada recebida pelo operador antes da data informada.'), { statusCode: 409, code: 'INPUT_NOT_RECEIVED' });
+        }
         if (!species.length || new Set(species.map(lot => lot.species_scientific)).size !== 1) throw Object.assign(new Error('Entradas devem possuir espécie compatível para o mesmo parâmetro de conversão.'), { code: 'SPECIES_MISMATCH' });
         const capacities = new Map<string, Decimal>();
         for (const input of inputs) {
@@ -466,12 +536,13 @@ export async function buildServer(): Promise<FastifyInstance> {
         }
         const parameter = await tx.conversionParameter.findUnique({ where: { id: String(b.conversion_parameter_id) } });
         if (!parameter) throw Object.assign(new Error('Parâmetro CRV não encontrado; operação permanece sem conclusão.'), { code: 'CRV_PARAMETER_MISSING' });
+        if (outputs.some(output => output.product !== parameter.output_product) || origins.length > 0 && parameter.input_product !== 'tora' || products.some(product => product.product !== parameter.input_product)) throw Object.assign(new Error('Produtos de entrada e saída devem corresponder ao parâmetro de conversão selecionado.'), { code: 'CRV_PRODUCT_MISMATCH' });
         const operationDate = String(b.occurred_at).slice(0, 10);
         if (operationDate < parameter.valid_from.toISOString().slice(0, 10) || parameter.valid_until && operationDate > parameter.valid_until.toISOString().slice(0, 10)) throw Object.assign(new Error('Parâmetro CRV fora da vigência da transformação.'), { code: 'CRV_PARAMETER_EXPIRED' });
         const assessment = assessConversion({ inputVolumeM3: totalInput.toFixed(), outputVolumeM3: totalOutput.toFixed(), multiplier: parameter.coefficient.toString(), parameterVersion: parameter.version, parameterSource: parameter.source_url, parameterValidFrom: parameter.valid_from.toISOString().slice(0, 10), parameterValidUntil: parameter.valid_until?.toISOString().slice(0, 10), assessmentDate: operationDate });
         const transformation = await tx.transformation.create({ data: { code: String(b.code), organization_id: actor.organization_id, occurred_at: new Date(String(b.occurred_at)), conversion_parameter_id: parameter.id, residue_m3: String(b.residue_m3 ?? '0'), loss_m3: String(b.loss_m3 ?? '0'), assessment_scope: String(b.assessment_scope ?? 'DEMONSTRATIVO'), created_by_user_id: actor.id, inputs: { create: inputs.map(i => ({ lot_id: i.lot_id, volume_m3: i.volume_m3 })) } } });
         for (const input of inputs) {
-          await tx.balance.update({ where: { lot_id_organization_id: { lot_id: input.lot_id, organization_id: actor.organization_id } }, data: { available_m3: { decrement: input.volume_m3 } } });
+          await debitAvailable(tx, actor.organization_id, input.lot_id, input.volume_m3);
           await tx.balanceMovement.create({ data: { lot_id: input.lot_id, organization_id: actor.organization_id, entity_type: 'TRANSFORMATION', entity_id: transformation.id, action: 'CONSUME', volume_m3: input.volume_m3 } });
         }
         const created = [];
@@ -501,11 +572,12 @@ export async function buildServer(): Promise<FastifyInstance> {
     const actor = request.authUser!; const body = request.body;
     const auditCase = await prisma.auditCase.findFirst({ where: { id: request.params.id, organization_id: actor.organization_id } });
     if (!auditCase) return reply.code(404).send({ error: { code: 'CASE_NOT_FOUND', message: 'Caso não encontrado no escopo da organização.', request_id: request.id } });
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: actor.id } });
-    if (!user.roles.includes('AUDITOR')) return reply.code(403).send({ error: { code: 'AUDITOR_ROLE_REQUIRED', message: 'Perfil de auditor necessário.', request_id: request.id } });
+    if (!actor.roles.includes('AUDITOR')) return reply.code(403).send({ error: { code: 'AUDITOR_ROLE_REQUIRED', message: 'Perfil de auditor necessário.', request_id: request.id } });
     let operationAuthor: string | null = null;
     if (auditCase.entity_type === 'ORIGIN_LOT') operationAuthor = (await prisma.originLot.findUnique({ where: { id: auditCase.entity_id }, select: { created_by_user_id: true } }))?.created_by_user_id ?? null;
     if (auditCase.entity_type === 'TRANSFORMATION') operationAuthor = (await prisma.transformation.findUnique({ where: { id: auditCase.entity_id }, select: { created_by_user_id: true } }))?.created_by_user_id ?? null;
+    if (auditCase.entity_type === 'SHIPMENT') operationAuthor = (await prisma.shipment.findUnique({ where: { id: auditCase.entity_id }, select: { created_by_user_id: true } }))?.created_by_user_id ?? null;
+    if (auditCase.entity_type === 'PLOT') operationAuthor = (await prisma.plot.findUnique({ where: { id: auditCase.entity_id }, select: { created_by_user_id: true } }))?.created_by_user_id ?? null;
     try { assertNoSelfReview({ reviewerUserId: actor.id, operationAuthorUserId: operationAuthor, versionAuthorUserId: auditCase.created_by_user_id }); }
     catch (error) {
       await logAccess(request, actor.id, false, (error as { code?: string }).code ?? 'REVIEW_AUTHOR_UNKNOWN');
@@ -514,7 +586,7 @@ export async function buildServer(): Promise<FastifyInstance> {
     }
     if (!body.comment?.trim() || body.decision === 'RESOLVIDO_COM_EVIDENCIA' && (!Array.isArray(body.evidence_ids) || body.evidence_ids.length === 0)) return reply.code(422).send({ error: { code: 'REVIEW_EVIDENCE_REQUIRED', message: 'Informe justificativa e evidência vinculada para resolver o caso.', request_id: request.id } });
     if (body.evidence_ids.length) {
-      const docs = await prisma.document.count({ where: { id: { in: body.evidence_ids }, organization_id: actor.organization_id } });
+      const docs = await prisma.document.count({ where: { id: { in: body.evidence_ids }, OR: [{ organization_id: actor.organization_id }, { allowed_organization_ids: { has: actor.organization_id } }] } });
       if (docs !== body.evidence_ids.length) return reply.code(422).send({ error: { code: 'EVIDENCE_NOT_ACCESSIBLE', message: 'Uma ou mais evidências não estão disponíveis neste escopo.', request_id: request.id } });
     }
     if (body.decision === 'RESOLVIDO_COM_EVIDENCIA' && auditCase.rule_id === 'R19') return reply.code(422).send({ error: { code: 'RULE_REASSESSMENT_REQUIRED', message: 'Retificações exigem reconciliação dos descendentes afetados; justificativa contextual não resolve R19.', request_id: request.id } });
@@ -527,6 +599,8 @@ export async function buildServer(): Promise<FastifyInstance> {
       const currentCase = await tx.auditCase.findUniqueOrThrow({ where: { id: currentAuditCase.id } });
       if (!['ABERTO', 'EM_ANALISE', 'MANTIDO_PENDENTE'].includes(currentCase.status)) throw Object.assign(new Error('O caso já recebeu decisão final.'), { statusCode: 409, code: 'CASE_ALREADY_FINAL' });
       let txReassessment: ReturnType<typeof reassessConversionWithException> | undefined;
+      const contextualBinding = body.decision === 'RESOLVIDO_COM_EVIDENCIA' && !needsConversionReassessment
+        ? await bindContextualReview(tx, currentCase, body.evidence_ids) : undefined;
       if (needsConversionReassessment) {
         const [originalCheck, transformation, exception] = await Promise.all([
           tx.check.findFirst({ where: { id: currentAuditCase.check_id, entity_id: currentAuditCase.entity_id, rule_id: 'R10', status: 'ALERTA' } }),
@@ -562,7 +636,16 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
       const decision = await tx.auditDecision.create({ data: { case_id: currentAuditCase.id, reviewer_user_id: actor.id, decision: body.decision, comment: body.comment.trim(), evidence_ids: body.evidence_ids, conversion_exception_id: body.conversion_exception_id } });
       const updated = await tx.auditCase.update({ where: { id: currentAuditCase.id }, data: { status: body.decision } });
-      await appendEvent(tx, { streamId: currentAuditCase.entity_id, entityType: currentAuditCase.entity_type, entityId: currentAuditCase.entity_id, type: 'AUDIT_CASE_DECIDED', actorId: actor.id, payload: { audit_case_id: currentAuditCase.id, decision_id: decision.id, decision: body.decision, evidence_ids: body.evidence_ids, conversion_exception_id: body.conversion_exception_id ?? null } });
+      await tx.check.create({ data: { organization_id: actor.organization_id, entity_type: currentAuditCase.entity_type,
+        entity_id: currentAuditCase.entity_id, rule_id: `HUMAN_REVIEW_${currentAuditCase.check_id}`, rule_version: '1',
+        name: 'Revisão humana registrada', description: 'Decisão identificada sem apagar a checagem original.',
+        source: { decision_id: decision.id, case_id: currentAuditCase.id }, modality: 'HUMAN_REVIEW', dimension: 'human_review',
+        status: body.decision === 'RESOLVIDO_COM_EVIDENCIA' ? 'PASSOU' : 'PENDENTE', technical_severity: 'INFO',
+        message: 'Decisão humana preservada; demais evidências e regras continuam aplicáveis.', suggested_action: 'Consultar decisão e evidências vinculadas.',
+        values: { decision: body.decision, original_check_id: currentAuditCase.check_id },
+        assessment_scope: (await tx.check.findUniqueOrThrow({ where: { id: currentAuditCase.check_id } })).assessment_scope,
+      } });
+      await appendEvent(tx, { streamId: currentAuditCase.entity_id, entityType: currentAuditCase.entity_type, entityId: currentAuditCase.entity_id, type: 'AUDIT_CASE_DECIDED', actorId: actor.id, payload: { audit_case_id: currentAuditCase.id, decision_id: decision.id, decision: body.decision, evidence_ids: body.evidence_ids, conversion_exception_id: body.conversion_exception_id ?? null, contextual_binding: contextualBinding ?? null } });
       return { statusCode: 201, body: { decision, audit_case: updated, review: txReassessment ? { original_signal: currentAuditCase.rule_id, signal_overwritten: false, rule_re_evaluated: true, assessment: txReassessment } : review } };
     });
     return reply.code(saved.statusCode).send(saved.body);
@@ -575,7 +658,9 @@ export async function buildServer(): Promise<FastifyInstance> {
     let requiresReview = false;
     try { requiresReview = (await verifyStoredPassport(prisma, passport, readDocument)).current_state.requires_review; }
     catch { requiresReview = true; }
-    return { id: passport.id, version: passport.version, product: content.product ?? null, species: content.species ?? null, region: content.region ?? null, stages: content.stages ?? [], readiness_status: requiresReview ? 'MISSING_EVIDENCE' : content.evidence_status ?? 'MISSING_EVIDENCE', evidence_status: content.evidence_status ?? 'MISSING_EVIDENCE', requires_review: requiresReview, assessment_scope: passport.assessment_scope, regulatory_coverage: 'PENDENTE_DE_VERIFICACAO', content_hash: passport.content_hash };
+    const regulatory = await regulatorySummaryForProduct(prisma, passport.product_lot_id);
+    requiresReview ||= regulatory.coverage !== 'CONFIRMADA';
+    return { id: passport.id, version: passport.version, product: content.product ?? null, species: content.species ?? null, region: content.region ?? null, stages: content.stages ?? [], readiness_status: requiresReview ? 'MISSING_EVIDENCE' : content.evidence_status ?? 'MISSING_EVIDENCE', evidence_status: content.evidence_status ?? 'MISSING_EVIDENCE', requires_review: requiresReview, assessment_scope: passport.assessment_scope, regulatory_coverage: regulatory.coverage, regulatory_summary: regulatory, content_hash: passport.content_hash };
   });
 
   app.post<{ Body: { product_lot_id: string; assessment_scope: 'REAL' | 'DEMONSTRATIVO' } }>('/api/v1/passports', { schema: { body: PassportCreateSchema } }, async (request, reply) => {
@@ -589,17 +674,17 @@ export async function buildServer(): Promise<FastifyInstance> {
     const ancestryEntityIds = [...new Set([lot.id, ...ancestry.product_lot_ids, ...ancestry.origin_lots.map((x: any) => x.id), ...ancestry.plots.map((x: any) => x.id), ...ancestry.transformations.map((x: any) => x.id), ...ancestry.shipments.map((x: any) => x.id)])];
     const [checks, provenanceRows, ancestorDocuments] = await Promise.all([
       tx.check.findMany({ where: { entity_id: { in: ancestryEntityIds } }, orderBy: { created_at: 'desc' } }),
-      tx.lotProvenance.findMany({ where: { product_lot_id: lot.id } }),
+      tx.lotProvenance.findMany({ where: { product_lot_id: { in: ancestry.product_lot_ids } }, orderBy: { id: 'asc' } }),
       tx.document.findMany({ where: { id: { in: ancestry.document_ids } }, select: { id: true, content_hash: true, storage_key: true, data_provenance: true } }),
     ]);
     const documentBytesValid = await Promise.all(ancestorDocuments.map(async (document: any) => {
       try { return createHash('sha256').update(await readDocument(document.storage_key)).digest('hex') === document.content_hash; }
       catch { return false; }
     }));
-    const effectiveChecks = latestChecks(checks).filter((check: any) => check.assessment_scope === request.body.assessment_scope);
-    const dimensions: Record<string, 'PASSOU' | 'ALERTA' | 'PENDENTE' | 'NAO_AVALIADO'> = {};
-    for (const check of effectiveChecks) if (!dimensions[check.dimension]) dimensions[check.dimension] = check.status as typeof dimensions[string];
-    const unknown = provenanceRows.some((p: Prisma.LotProvenanceGetPayload<{}>) => !p.origin_lot_id && new Decimal(p.volume_m3.toString()).gt(0));
+    const effectiveChecks = await effectiveReviewedChecks(tx, latestChecks(checks).filter((check: any) => check.assessment_scope === request.body.assessment_scope));
+    const dimensions = aggregateCheckDimensions(effectiveChecks);
+    const allocationMissing = ancestry.products.some(product => !provenanceRows.filter(row => row.product_lot_id === product.id).reduce((sum, row) => sum.plus(row.volume_m3.toString()), new Decimal(0)).eq(product.volume_m3.toString()));
+    const unknown = allocationMissing || provenanceRows.some((p: Prisma.LotProvenanceGetPayload<{}>) => !p.origin_lot_id && new Decimal(p.volume_m3.toString()).gt(0));
     const openCases = await tx.auditCase.count({ where: { entity_id: { in: ancestryEntityIds }, status: { in: ['ABERTO', 'EM_ANALISE', 'MANTIDO_PENDENTE'] } } });
     const ancestorProducts = await tx.productLot.findMany({ where: { id: { in: ancestry.product_lot_ids } }, select: { assessment_scope: true, data_provenance: true } });
     const simulated = request.body.assessment_scope === 'DEMONSTRATIVO' || containsSimulatedEvidence({
@@ -613,28 +698,31 @@ export async function buildServer(): Promise<FastifyInstance> {
       shipments: ancestry.shipments.map((x: any) => ({ official_system: x.official_system, carrier: x.carrier })),
       documents: ancestorDocuments.map((x: any) => x.data_provenance),
     });
-    const missingDocumentEvidence = ancestorDocuments.length !== new Set(ancestry.document_ids).size || documentBytesValid.some((valid) => !valid);
-    const readiness = assessReadiness({ assessment_scope: request.body.assessment_scope, dimensions, regulatory_coverage: 'PENDENTE_DE_VERIFICACAO', has_open_alert: openCases > 0 || missingDocumentEvidence || effectiveChecks.some((c: Prisma.CheckGetPayload<{}>) => c.status === 'ALERTA'), has_unknown_origin: unknown, has_simulated_supporting_evidence: simulated });
+    const missingDocumentEvidence = ancestry.origin_lots.some(origin => !origin.permits?.length) || ancestorDocuments.length !== new Set(ancestry.document_ids).size || documentBytesValid.some((valid) => !valid);
+    const regulatory = await regulatorySummaryForProduct(tx, lot.id);
+    const readiness = assessReadiness({ assessment_scope: request.body.assessment_scope, dimensions, regulatory_coverage: regulatory.coverage, has_open_alert: openCases > 0 || missingDocumentEvidence || effectiveChecks.some((c: Prisma.CheckGetPayload<{}>) => c.status === 'ALERTA'), has_unknown_origin: unknown, has_simulated_supporting_evidence: simulated });
     const publicToken = randomBytes(32).toString('base64url');
     const snapshot = {
       product: lot.product, species: { common: lot.species_common, scientific: lot.species_scientific },
       region: 'Brasil', stages: ['origem', 'transformação', 'revisão', 'passaporte'],
       evidence_status: readiness.readiness, readiness_reasons: readiness.reasons,
       assessment_scope: request.body.assessment_scope, regulatory_coverage: readiness.regulatory_coverage,
-      volume_m3: lot.volume_m3.toString(), provenance: provenanceRows.map((p: Prisma.LotProvenanceGetPayload<{}>) => ({ origin_lot_id: p.origin_lot_id, volume_m3: p.volume_m3.toString(), fraction: p.fraction.toString() })),
+      volume_m3: lot.volume_m3.toString(), provenance: provenanceRows.filter(row => row.product_lot_id === lot.id).map((p: Prisma.LotProvenanceGetPayload<{}>) => ({ origin_lot_id: p.origin_lot_id, volume_m3: p.volume_m3.toString(), fraction: p.fraction.toString() })),
       ancestry: { origin_lot_ids: ancestry.origin_lots.map((x: any) => x.id), product_lot_ids: ancestry.product_lot_ids, plot_ids: ancestry.plots.map((x: any) => x.id), plot_digests: ancestry.plots.map((x: any) => ({ id: x.id, geometry_hash: x.geometry_hash, geometry_version: x.geometry_version, calculated_hash: plotGeometrySha(x) })), entity_digests: ancestryDigests(ancestry), transformation_ids: ancestry.transformations.map((x: any) => x.id), shipment_ids: ancestry.shipments.map((x: any) => x.id), document_ids: ancestry.document_ids, document_digests: ancestorDocuments.map((x: any) => ({ id: x.id, content_hash: x.content_hash })) },
-      checks: effectiveChecks.map((c: Prisma.CheckGetPayload<{}>) => ({ rule_id: c.rule_id, status: c.status, message: c.message, dimension: c.dimension })),
+      checks: effectiveChecks.map(c => ({ rule_id: c.rule_id, status: c.status, original_status: c.original_status ?? c.status, contextual_resolution: c.contextual_resolution ?? null, message: c.message, dimension: c.dimension })),
+      provenance_digests: provenanceRows.map(row => ({ id: row.id, content_hash: sha256Canonical(JSON.parse(JSON.stringify(row))) })),
       disclaimer: 'Documento demonstrativo de evidências; não certifica legalidade nem substitui decisão humana.',
     };
     const contentHash = sha256Canonical(snapshot);
     const qr = await QRCode.toDataURL(`${process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000'}/p/${publicToken}`);
       const previous = await tx.passport.findFirst({ where: { product_lot_id: lot.id }, orderBy: { version: 'desc' } });
-      const created = await tx.passport.create({ data: { organization_id: actor.organization_id, product_lot_id: lot.id, public_token: publicToken, version: (previous?.version ?? 0) + 1, content: snapshot, content_hash: contentHash, snapshot_heads: {}, assessment_scope: request.body.assessment_scope, created_by_user_id: actor.id } });
-      await appendEvent(tx, { streamId: lot.id, entityType: 'PASSPORT', entityId: created.id, type: 'PASSPORT_ISSUED', actorId: actor.id, payload: { passport_id: created.id, version: created.version, content_hash: contentHash } });
+      const passportId = randomUUID();
+      const version = (previous?.version ?? 0) + 1;
+      await appendEvent(tx, { streamId: lot.id, entityType: 'PASSPORT', entityId: passportId, type: 'PASSPORT_ISSUED', actorId: actor.id, payload: { passport_id: passportId, version, content_hash: contentHash } });
       const streamIds = [...new Set([lot.id, ...ancestryEntityIds])];
       const heads = await tx.streamHead.findMany({ where: { stream_id: { in: streamIds } } });
       const headsById = Object.fromEntries(streamIds.map((id: string) => { const head = heads.find((x: any) => x.stream_id === id); return [id, { sequence: head?.sequence ?? 0, event_hash: head?.event_hash ?? null }]; }));
-      const passport = await tx.passport.update({ where: { id: created.id }, data: { snapshot_heads: headsById } });
+      const passport = await tx.passport.create({ data: { id: passportId, organization_id: actor.organization_id, product_lot_id: lot.id, public_token: publicToken, version, content: snapshot, content_hash: contentHash, snapshot_heads: headsById, assessment_scope: request.body.assessment_scope, created_by_user_id: actor.id } });
       return { statusCode: 201, body: { passport, qr_data_url: qr, readiness } };
     });
     return reply.code(result.statusCode).send(result.body);
@@ -649,7 +737,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   app.get<{ Params: { id: string }; Querystring: { format?: string } }>('/api/v1/passports/:id/bundle', async (request, reply) => {
-    const started = Date.now();
+    const started = performance.now();
     const actor = request.authUser!;
     const passport = await prisma.passport.findUnique({ where: { id: request.params.id } });
     if (!passport || !canAccessCommercialPassport({ ownerOrganizationId: passport.organization_id, requesterOrganizationId: actor.organization_id, requesterRoles: actor.roles, grantedOrganizationIds: passport.allowed_organization_ids })) return reply.code(404).send({ error: { code: 'PASSPORT_NOT_FOUND', message: 'Passaporte não encontrado neste escopo.', request_id: request.id } });
@@ -659,16 +747,18 @@ export async function buildServer(): Promise<FastifyInstance> {
       const current = await verifyStoredPassport(prisma, passport, readDocument);
       currentState = { ...current.current_state, reasons: [...new Set([...current.current_state.alerts.map((x: any) => x.rule_id), ...(current.integrity.issues.map((x: any) => x.code))])] };
     } catch { currentState = { readiness_status: 'MISSING_EVIDENCE', requires_review: true, reasons: ['ANCESTRY_INVALID'] }; }
-    const bundle = { passport_id: passport.id, version: passport.version, generated_at: new Date().toISOString(), content_hash: visible.content_hash, snapshot_content_hash: visible.snapshot_content_hash, content: visible.content, withheld_document_count: visible.withheld_document_count, current_state: currentState, guidance: 'Guarde os documentos e registros por cinco anos conforme orientação do operador; esta aplicação não garante retenção por esse prazo.', limitations: ['Integridade dos hashes não comprova veracidade nem assinatura digital.'] };
+    const regulatory = await regulatorySummaryForProduct(prisma, passport.product_lot_id);
+    if (regulatory.coverage !== 'CONFIRMADA') currentState = { readiness_status: 'MISSING_EVIDENCE', requires_review: true, reasons: [...new Set([...currentState.reasons, 'REGULATORY_COVERAGE_UNCONFIRMED'])] };
+    const bundle = await buildEvidenceBundle(prisma, { passport, actor, visible, current_state: currentState, regulatory_summary: regulatory, started_at: started });
     const format = (request.query.format ?? 'JSON').toUpperCase();
     if (format === 'HTML') {
       const escape = (v: string) => v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
-      const html = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Pacote de evidências ForestTrace</title><body><h1>Pacote de evidências ForestTrace</h1><p>Versão ${passport.version} · SHA-256 desta visualização ${escape(bundle.content_hash)} · snapshot ${escape(bundle.snapshot_content_hash)}</p><h2>Estado atual</h2><pre>${escape(JSON.stringify(bundle.current_state, null, 2))}</pre><pre>${escape(JSON.stringify(visible.content, null, 2))}</pre><p>${escape(bundle.guidance)}</p><p>${escape(bundle.limitations.join(' '))}</p></body></html>`;
-      const duration = Date.now() - started; await prisma.evidenceBundle.create({ data: { passport_id: passport.id, user_id: request.authUser!.id, format, duration_ms: duration, state: 'GENERATED' } });
+      const html = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Pacote de evidências ForestTrace</title><style>body{font-family:system-ui;margin:2rem}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media print{body{margin:0}}</style><body><h1>Pacote de evidências ForestTrace</h1><p>Versão ${passport.version} · SHA-256 desta visualização ${escape(bundle.content_hash)} · snapshot ${escape(bundle.snapshot_content_hash)}</p><h2>Estado atual e checklist</h2><pre>${escape(JSON.stringify(bundle, null, 2))}</pre><p>${escape(bundle.guidance)}</p><p>${escape(bundle.limitations.join(' '))}</p></body></html>`;
+      const duration = Math.round(performance.now() - started); await prisma.evidenceBundle.create({ data: { passport_id: passport.id, user_id: request.authUser!.id, format, duration_ms: duration, state: 'GENERATED' } });
       return reply.type('text/html; charset=utf-8').send(html);
     }
     if (format !== 'JSON') return reply.code(422).send({ error: { code: 'FORMAT_UNSUPPORTED', message: 'Formato aceito: JSON ou HTML.', request_id: request.id } });
-    await prisma.evidenceBundle.create({ data: { passport_id: passport.id, user_id: request.authUser!.id, format, duration_ms: Date.now() - started, state: 'GENERATED' } });
+    await prisma.evidenceBundle.create({ data: { passport_id: passport.id, user_id: request.authUser!.id, format, duration_ms: Math.round(performance.now() - started), state: 'GENERATED' } });
     return bundle;
   });
 
@@ -691,6 +781,11 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   registerCorrectionRoutes(app);
   registerForestUtilizationRoutes(app);
+  registerPlotReadRoutes(app);
+  registerOriginLotReadRoutes(app);
+  registerEvidenceDiagnosticRoutes(app);
+  registerRegulatoryRoutes(app);
+  registerDeliveryRoutes(app);
   const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   if (existsSync(resolve(webRoot, 'index.html'))) {
     await app.register(fastifyStatic, { root: webRoot, wildcard: false });
@@ -701,5 +796,5 @@ export async function buildServer(): Promise<FastifyInstance> {
 }
 
 async function logAccess(request: FastifyRequest, userId: string | null, allowed: boolean, reason: string) {
-  await prisma.accessLog.create({ data: { user_id: userId, action: `${request.method} ${request.url}`, allowed, reason, request_id: request.id } }).catch(() => undefined);
+  await prisma.accessLog.create({ data: { user_id: userId, action: `${request.method} ${request.routeOptions.url ?? request.url.split('?')[0]}`, allowed, reason, request_id: request.id } }).catch(() => undefined);
 }

@@ -2,6 +2,7 @@ import { sha256Canonical, sha256Bytes, verifyEventChain, type ChainEvent } from 
 import { loadProductAncestry, plotGeometrySha } from './ancestry.js';
 import { latestChecks } from './review-readiness.js';
 import { ancestryDigests } from './ancestry-digests.js';
+import { effectiveReviewedChecks } from './contextual-review.js';
 
 export type SnapshotHead = { sequence: number; event_hash: string | null };
 export type DocumentDigest = { id: string; content_hash: string; storage_key: string };
@@ -27,7 +28,7 @@ export async function verifyStoredPassport(db: any, passport: any, readDocumentB
     db.auditCase.findMany({ where: { entity_id: { in: entityIds }, status: { in: ['ABERTO', 'EM_ANALISE', 'MANTIDO_PENDENTE'] } }, select: { rule_id: true } }),
     db.check.findMany({ where: { entity_id: { in: entityIds } }, orderBy: { created_at: 'desc' } }),
   ]);
-  const alerts = latestChecks(checkRows).filter((check: any) => check.status === 'ALERTA');
+  const alerts = (await effectiveReviewedChecks(db, latestChecks(checkRows) as any[])).filter((check: any) => check.status === 'ALERTA');
   const snapshot = passport.content as any;
   const expectedAncestry = snapshot?.ancestry ?? {};
   const snapshotHeads = passport.snapshot_heads as Record<string, SnapshotHead>;
@@ -47,6 +48,12 @@ export async function verifyStoredPassport(db: any, passport: any, readDocumentB
   const plotDigests = ancestry.plots.map((plot: any) => ({ id: plot.id, geometry_hash: plot.geometry_hash, geometry_version: plot.geometry_version, calculated_hash: plotGeometrySha(plot) })).sort((a: any, b: any) => a.id.localeCompare(b.id));
   const expectedPlots = [...(expectedAncestry.plot_digests ?? [])].sort((a: any, b: any) => a.id.localeCompare(b.id));
   const geometryChanged = sha256Canonical(plotDigests) !== sha256Canonical(expectedPlots) || plotDigests.some((plot: any) => plot.geometry_hash !== plot.calculated_hash);
+  let provenanceChanged = false;
+  if (Array.isArray(snapshot?.provenance_digests)) {
+    const rows = db.lotProvenance ? await db.lotProvenance.findMany({ where: { product_lot_id: { in: ancestry.product_lot_ids } }, orderBy: { id: 'asc' } }) : [];
+    const current = rows.map((row: any) => ({ id: row.id, content_hash: sha256Canonical(JSON.parse(JSON.stringify(row))) }));
+    provenanceChanged = sha256Canonical(current) !== sha256Canonical(snapshot.provenance_digests);
+  }
   const streamIds = Object.keys(snapshotHeads);
   const requiredDocumentIds = [...new Set([...ancestry.document_ids, ...(expectedAncestry.document_ids ?? [])])];
   const [events, heads, documents] = await Promise.all([
@@ -62,8 +69,9 @@ export async function verifyStoredPassport(db: any, passport: any, readDocumentB
   for (const id of missingCheckpointIds) integrity.issues.push({ code: 'SNAPSHOT_CHECKPOINT_MISSING', id });
   if (entitiesChanged) integrity.issues.push({ code: 'ANCESTRY_ENTITY_HASH_MISMATCH', id: passport.product_lot_id });
   if (geometryChanged) integrity.issues.push({ code: 'PLOT_GEOMETRY_HASH_MISMATCH', id: passport.product_lot_id });
-  integrity.valid = integrity.valid && !linksChanged && !missingCheckpointIds.length && !entitiesChanged && !geometryChanged;
-  const requiresReview = openCases.length > 0 || alerts.length > 0 || linksChanged || missingCheckpointIds.length > 0 || entitiesChanged || geometryChanged || integrity.changed_streams_since_snapshot.length > 0 || !integrity.valid;
+  if (provenanceChanged) integrity.issues.push({ code: 'PROVENANCE_HASH_MISMATCH', id: passport.product_lot_id });
+  integrity.valid = integrity.valid && !linksChanged && !missingCheckpointIds.length && !entitiesChanged && !geometryChanged && !provenanceChanged;
+  const requiresReview = openCases.length > 0 || alerts.length > 0 || linksChanged || missingCheckpointIds.length > 0 || entitiesChanged || geometryChanged || provenanceChanged || integrity.changed_streams_since_snapshot.length > 0 || !integrity.valid;
   return {
     integrity, ancestry,
     current_state: { requires_review: requiresReview, readiness_status: requiresReview ? 'MISSING_EVIDENCE' : snapshot?.evidence_status ?? 'MISSING_EVIDENCE', open_case_count: openCases.length, alerts: alerts.map((x: any) => ({ rule_id: x.rule_id })) },

@@ -26,6 +26,18 @@ export function latestChecks<T extends { entity_type: string; entity_id: string;
     return true;
   });
 }
+
+/** Every applicable current check participates; a passing row cannot hide another pending row. */
+export function aggregateCheckDimensions(checks: Array<{ dimension: string; status: string }>) {
+  const dimensions: ReadinessInput['dimensions'] = {};
+  const rank: Record<string, number> = { PASSOU: 0, NAO_AVALIADO: 1, PENDENTE: 2, ALERTA: 3 };
+  for (const dimension of ['documentary_check','geospatial_check','volume_check','chain_of_custody_check','human_review'] as const) {
+    const rows = checks.filter(check => check.dimension === dimension);
+    if (!rows.length) { dimensions[dimension] = 'NAO_AVALIADO'; continue; }
+    dimensions[dimension] = rows.reduce<string>((worst, check) => (rank[check.status] ?? 1) > (rank[worst] ?? 1) ? check.status : worst, 'PASSOU') as CheckResult;
+  }
+  return dimensions;
+}
 export function assessReadiness(input: ReadinessInput) {
   const reasons: string[]=[];
   if (input.assessment_scope==='DEMONSTRATIVO') reasons.push('ASSESSMENT_SCOPE_DEMONSTRATIVE');

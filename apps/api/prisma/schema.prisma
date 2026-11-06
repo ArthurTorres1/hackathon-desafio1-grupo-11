@@ -476,6 +476,12 @@ model SourceQuery {
   @@map("source_queries")
 }
 
+enum RegulatoryCoverage {
+  CONFIRMADA
+  PENDENTE_DE_VERIFICACAO
+  CONFLITANTE
+}
+
 model RegulatoryRequirement {
   id String @id @default(uuid()) @db.Uuid
   jurisdiction String
@@ -488,11 +494,13 @@ model RegulatoryRequirement {
   version String
   valid_from DateTime @db.Date
   valid_until DateTime? @db.Date
-  coverage String
+  coverage RegulatoryCoverage
   required_evidence Json
   resolution_criteria String
   checked_at DateTime
   checked_by String
+  supersedes_id String? @unique @db.Uuid
+  @@unique([jurisdiction, phase, product, modality, official_system, source_url, article, version], map: "regulatory_requirements_version_key")
   @@map("regulatory_requirements")
 }
 
@@ -501,11 +509,15 @@ model RegulatoryAssessment {
   organization_id String @db.Uuid
   entity_type String
   entity_id String @db.Uuid
-  coverage String
+  coverage RegulatoryCoverage
   requirements Json
   gaps Json
   version Int
+  context Json @default("{}")
+  context_hash String?
+  created_by_user_id String? @db.Uuid
   created_at DateTime @default(now())
+  @@unique([organization_id, entity_type, entity_id, version], map: "regulatory_assessments_version_key")
   @@map("regulatory_assessments")
 }
 

@@ -8,3 +8,4 @@
 
 .forest-calculator{margin-top:18px;overflow-wrap:anywhere}.forest-calculator .inline-actions{margin-bottom:16px}.calculation-metric{border-top:1px solid var(--line);padding:12px 0}.calculation-metric dl>div{display:flex;justify-content:space-between;gap:16px;padding:5px 0}.calculation-metric dd{margin:0;font-variant-numeric:tabular-nums}.forest-calculator ul{padding-left:20px}.forest-calculator li{margin-bottom:6px}
 .calculation-metric dd{white-space:nowrap;flex-shrink:0}.calculation-metric dt{min-width:0}
+.case-detail p,.callout p{overflow-wrap:anywhere}.case-detail p{font-size:11px;line-height:1.5}.primary-column{min-width:0}.primary-column>.panel+.panel{margin-top:18px}.field-block span input[type=checkbox]{width:auto;margin-right:7px}.map-wrap{min-width:0}.form-panel img{max-width:100%;height:auto}

@@ -1,5 +1,9 @@
 import { Type, type Static } from '@sinclair/typebox';
+import { ResponseErrorSchema } from './responses.js';
 export * from './forest-utilization.js';
+export * from './regulatory.js';
+export * from './responses.js';
+export * from './delivery.js';
 
 export const UF_CODES = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'] as const;
 export type UF = typeof UF_CODES[number];
@@ -102,7 +106,7 @@ export const ShipmentCreateSchema = Type.Object({
   document_ids: Type.Array(UUIDSchema), fiscal_key: Type.Optional(Type.String()),
 }, { additionalProperties: false });
 export const ShipmentDispatchSchema = Type.Object({ occurred_at: TimestampSchema }, { additionalProperties: false });
-export const ShipmentReceiveSchema = Type.Object({ occurred_at: TimestampSchema, items: Type.Array(ShipmentItemSchema, { minItems: 1 }) }, { additionalProperties: false });
+export const ShipmentReceiveSchema = Type.Object({ occurred_at: TimestampSchema, items: Type.Array(Type.Object({ lot_id: UUIDSchema, volume_m3: DecimalSchema }, { additionalProperties: false }), { minItems: 1 }) }, { additionalProperties: false });
 export const AllocationSchema = Type.Object({ origin_lot_id: Type.Union([UUIDSchema, Type.Null()]), volume_m3: PositiveDecimalSchema }, { additionalProperties: false });
 export const TransformationOutputSchema = Type.Object({
   client_ref: Type.String({ minLength: 1 }), product: Type.String({ minLength: 1 }), volume_m3: PositiveDecimalSchema,
@@ -132,8 +136,8 @@ export const DocumentCreateSchema = Type.Object({
   fiscal_key: Type.Optional(Type.String()),
 }, { additionalProperties: false });
 export const PassportCreateSchema = Type.Object({ product_lot_id: UUIDSchema, assessment_scope: AssessmentScopeSchema }, { additionalProperties: false });
-export const ErrorSchema = Type.Object({ error: Type.Object({ code: Type.String(), message: Type.String(), fields: Type.Optional(Type.Record(Type.String(), Type.String())), request_id: Type.String() }, { additionalProperties: false }) }, { additionalProperties: false });
-export const HealthSchema = Type.Object({ status: Type.String(), service: Type.String(), database: Type.Optional(Type.String()) }, { additionalProperties: false });
+export const ErrorSchema = ResponseErrorSchema;
+export const HealthSchema = Type.Object({ status: Type.String(), service: Type.String(), database: Type.Optional(Type.String()), postgis: Type.Optional(Type.String()) }, { additionalProperties: false });
 export const speciesDemo = { common_name: 'angelim-vermelho', scientific_name: 'Dinizia excelsa', scientific_name_verification: 'PENDENTE_DE_VERIFICACAO' } as const;
 
 export const API_PATHS = { plots: '/api/v1/plots', origin_lots: '/api/v1/origin-lots', harvests: '/api/v1/harvests', shipments: '/api/v1/shipments', transformations: '/api/v1/transformations', sales: '/api/v1/sales', passports: '/api/v1/passports' } as const;

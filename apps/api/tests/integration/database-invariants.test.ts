@@ -90,8 +90,54 @@ describe('invariantes persistidas em PostgreSQL/PostGIS', () => {
       Prisma.sql`DELETE FROM custody_events WHERE false`,
       Prisma.sql`UPDATE checks SET status='PASSOU' WHERE false`,
       Prisma.sql`DELETE FROM audit_decisions WHERE false`,
+      Prisma.sql`UPDATE regulatory_requirements SET coverage='CONFIRMADA' WHERE false`,
+      Prisma.sql`DELETE FROM regulatory_assessments WHERE false`,
+      Prisma.sql`UPDATE passports SET content='{}'::jsonb WHERE false`,
+      Prisma.sql`DELETE FROM passports WHERE false`,
+      Prisma.sql`UPDATE conversion_parameters SET coefficient=1 WHERE false`,
     ]) await expect(app.$executeRaw(query)).rejects.toThrow();
     const identity = await app.$queryRaw<Array<{ current_user: string }>>`SELECT current_user`;
     expect(identity[0]!.current_user).toBe('foresttrace_app');
+  });
+
+  it.each([
+    { type: 'Polygon', coordinates: [[[-60,-3],[-59,-3],[-59,-2],[-60,-2]]] },
+    { type: 'Polygon', coordinates: [[[-60,-3],[-59,-2],[-60,-2],[-59,-3],[-60,-3]]] },
+    { type: 'Polygon', coordinates: [[[181,-3],[182,-3],[182,-2],[181,-2],[181,-3]]] },
+    { type: 'Point', coordinates: [-60,-3] },
+    { type: 'Polygon', coordinates: [] },
+  ])('rejeita geometria inválida mesmo sem passar pela API: %j', async geometry => {
+    await expect(owner.$transaction(async tx => {
+      const { plot } = await createOrigin(tx);
+      await tx.plot.update({ where: { id: plot.id }, data: { geometry } });
+    })).rejects.toThrow('plots_geometry_valid');
+  });
+
+  it('permite alterar grants sem liberar escrita no snapshot do passaporte', async () => {
+    await expect(app.$executeRaw`UPDATE passports SET allowed_organization_ids=ARRAY[]::text[] WHERE false`).resolves.toBe(0);
+  });
+
+  it('não concede privilégios de migração ao papel de aplicação', async () => {
+    const [role] = await app.$queryRaw<Array<{ rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean; can_create: boolean }>>`
+      SELECT rolsuper, rolcreatedb, rolcreaterole, has_schema_privilege(current_user, 'public', 'CREATE') AS can_create
+      FROM pg_roles WHERE rolname=current_user`;
+    expect(role).toEqual({ rolsuper: false, rolcreatedb: false, rolcreaterole: false, can_create: false });
+    await expect(app.$queryRaw`SELECT * FROM _prisma_migrations`).rejects.toThrow();
+  });
+
+  it('preserva cobertura pendente nas 27 UFs e rejeita confirmação vazia', async () => {
+    const states = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+    const requirement = { phase: 'ORIGIN', product: 'tora', modality: 'DEMO', official_system: 'NAO_VERIFICADO', source_url: 'https://example.invalid', article: 'PENDENTE', version: randomUUID(), valid_from: new Date('2026-01-01'), coverage: 'PENDENTE_DE_VERIFICACAO', required_evidence: [], resolution_criteria: 'Verificar fonte', checked_at: new Date(), checked_by: 'Teste sintético' };
+    // Roll back successful samples too, leaving no normative profiles behind.
+    const rollback = new Error('ROLLBACK_TEST_SAMPLES');
+    await expect(owner.$transaction(async tx => {
+      for (const jurisdiction of states) await tx.regulatoryRequirement.create({ data: { ...requirement, jurisdiction } });
+      throw rollback;
+    })).rejects.toBe(rollback);
+    await expect(owner.regulatoryRequirement.create({ data: { ...requirement, jurisdiction: 'XX' } })).rejects.toThrow('regulatory_requirements_jurisdiction_valid');
+    await expect(owner.$transaction(async tx => {
+      const { organization, lot } = await createOrigin(tx);
+      await tx.regulatoryAssessment.create({ data: { organization_id: organization.id, entity_type: 'ORIGIN_LOT', entity_id: lot.id, coverage: 'CONFIRMADA', requirements: [], gaps: [], version: 1 } });
+    })).rejects.toThrow('regulatory_assessments_valid');
   });
 });

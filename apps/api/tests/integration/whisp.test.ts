@@ -54,6 +54,10 @@ beforeAll(async()=>{
     { id: otherUserId, name: 'Whisp unrelated operator', organization_id: otherOrganizationId, roles: ['OPERATOR'] },
   ] });
   app = await buildServer();
+  await owner.membership.createMany({ data: [
+    { user_id: userId, organization_id: organizationId, role: 'OPERATOR' },
+    { user_id: otherUserId, organization_id: otherOrganizationId, role: 'OPERATOR' },
+  ] });
   session = await login(userId); otherSession = await login(otherUserId);
 });
 
@@ -87,6 +91,7 @@ afterAll(async()=>{
     await owner.plot.deleteMany({ where: { organization_id: organizationId } });
     await owner.idempotencyKey.deleteMany({ where: { user_id: { in: [userId,otherUserId] } } });
     await owner.session.deleteMany({ where: { user_id: { in: [userId,otherUserId] } } });
+    await owner.membership.deleteMany({ where: { user_id: { in: [userId,otherUserId] } } });
     await owner.user.deleteMany({ where: { id: { in: [userId,otherUserId] } } });
     await owner.organization.deleteMany({ where: { id: { in: [organizationId,otherOrganizationId] } } });
   } finally {

@@ -45,6 +45,13 @@ beforeAll(async () => {
     { id: buyer, name: 'Comprador', organization_id: stranger, roles: ['BUYER'] },
   ] });
   await owner.conversionParameter.create({ data: { id: parameterId, input_product: 'tora', output_product: 'serrado', coefficient: '0.35', regulation_reference: 'SIMULADA', source_url: 'https://example.invalid', version: randomUUID(), valid_from: new Date('2026-01-01'), data_provenance: 'SIMULADA' } });
+  await owner.membership.createMany({ data: [
+    { user_id: operator, organization_id: producer, role: 'OPERATOR' },
+    { user_id: operator, organization_id: producer, role: 'AUDITOR' },
+    { user_id: receiver, organization_id: mill, role: 'OPERATOR' },
+    { user_id: reviewer, organization_id: producer, role: 'AUDITOR' },
+    { user_id: buyer, organization_id: stranger, role: 'BUYER' },
+  ] });
   app = await buildServer();
   producerSession = await login(operator); millSession = await login(receiver);
   reviewerSession = await login(reviewer); buyerSession = await login(buyer);
@@ -95,6 +102,7 @@ describe.sequential('cadeia persistida pela API com papel de aplicação', () =>
   it('auditor proprietário gerencia grants; comprador da mesma organização não altera permissões', async () => {
     const restrictedId = randomUUID();
     await owner.user.create({ data: { id: restrictedId, name: 'Leitor sem gestão', organization_id: producer, roles: ['BUYER'] } });
+    await owner.membership.create({ data: { user_id: restrictedId, organization_id: producer, role: 'BUYER' } });
     const restricted = await login(restrictedId);
     const grant = await post(`documents/${documentId}/grants`, { organization_id: stranger }, reviewerSession);
     expect(grant.statusCode, grant.body).toBe(201);
@@ -220,7 +228,13 @@ describe.sequential('cadeia persistida pela API com papel de aplicação', () =>
   it('preserva anomalia 10→5 em quarentena e desfaz transformação que cria volume', async () => {
     const lot = await post('origin-lots', { plot_id: plotId, code: `ANOMALY-${randomUUID()}`, species_common_name: 'angelim-vermelho', species_scientific_name: 'Dinizia excelsa', authorized_volume_m3: '10', permit_reference: 'SIMULADA', permit_document_id: documentId, valid_from: '2026-01-01', valid_until: '2027-12-31', right_of_use: 'SIMULADO', assessment_scope: 'DEMONSTRATIVO', data_provenance: { volume: 'SIMULADA' } });
     expect(lot.statusCode, lot.body).toBe(201); const originId = lot.json().origin_lot.id;
+    // This actor also processes locally; receipt remains a separately authenticated fact.
     expect((await post('harvests', { origin_lot_id: originId, start_date: '2026-11-05', end_date: '2026-11-05', volume_m3: '10' })).statusCode).toBe(201);
+    const localShipment = await post('shipments', { sender_organization_id: producer, recipient_organization_id: producer, origin_state: 'AM', destination_state: 'AM', route_states: ['AM'], items: [{ lot_id: originId, volume_m3: '10' }], transporter: 'Custódia local sintética', official_system: 'NAO_VERIFICADO', document_ids: [documentId] });
+    expect(localShipment.statusCode, localShipment.body).toBe(201);
+    const localShipmentId = localShipment.json().shipment.id;
+    expect((await post(`shipments/${localShipmentId}/dispatch`, { occurred_at: new Date().toISOString() })).statusCode).toBe(200);
+    expect((await post(`shipments/${localShipmentId}/receive`, { occurred_at: new Date().toISOString(), items: [{ lot_id: originId, volume_m3: '10' }] })).statusCode).toBe(200);
     const payload = { code: randomUUID(), occurred_at: new Date().toISOString(), operator_organization_id: producer, conversion_parameter_id: parameterId, inputs: [{ lot_id: originId, volume_m3: '10' }], outputs: [{ client_ref: randomUUID(), product: 'serrado', volume_m3: '5', allocations: [{ origin_lot_id: originId, volume_m3: '5' }] }], residue_m3: '6', loss_m3: '0', assessment_scope: 'DEMONSTRATIVO' };
     const invalid = await post('transformations', payload);
     expect(invalid.statusCode, invalid.body).toBe(422); expect(invalid.json().error.code).toBe('MASS_BALANCE_EXCEEDED');
@@ -287,6 +301,7 @@ describe.sequential('cadeia persistida pela API com papel de aplicação', () =>
     const product = await owner.productLot.findUniqueOrThrow({ where: { id: productId } });
     const originalInputs = await owner.transformationInput.findMany({ where: { transformation_id: product.transformation_id } });
     await owner.user.update({ where: { id: receiver }, data: { roles: ['OPERATOR', 'AUDITOR'] } });
+    await owner.membership.create({ data: { user_id: receiver, organization_id: mill, role: 'AUDITOR' } });
     expect((await post(`documents/${documentId}/grants`, { organization_id: mill }, producerSession)).statusCode).toBe(201);
     try {
       await writeFile(`${storage}/${document.storage_key}`, Buffer.from('bytes adulterados'));

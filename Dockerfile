@@ -8,7 +8,7 @@ COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 COPY . .
 RUN npm run db:generate && npm run build
-RUN mkdir -p /app/data/private && chown -R node:node /app
+RUN mkdir -p /app/data/private && chown -R node:node /app/data
 USER node
 EXPOSE 3000
 CMD ["npm", "start"]

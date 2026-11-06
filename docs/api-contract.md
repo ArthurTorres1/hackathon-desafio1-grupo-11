@@ -2,6 +2,10 @@
 
 O contrato dos payloads está em `packages/contracts/src/index.ts`. A API publica OpenAPI em `/openapi.json` e a interface de consulta em `/docs`.
 
+Para atualizar o arquivo exportado, execute `npm run docs:openapi` após compilar os contratos. Os controles de acesso estão detalhados em [auth-persistence.md](auth-persistence.md), o fluxo transacional em [custody-persistence.md](custody-persistence.md) e as avaliações versionadas em [regulatory-persistence.md](regulatory-persistence.md).
+
+`GET /api/v1/plots` e `GET /api/v1/plots/{id}` recuperam parcelas da organização autenticada, com geometria privada, área PostGIS em hectares, hash canônico e autoria. `GET /api/v1/origin-lots` lista seus lotes/autorizações e `GET /api/v1/origin-lots/{id}` recupera lote, parcela, autorizações vinculadas e saldo. Outra organização recebe lista vazia ou 404 ao usar IDs conhecidos; ausência de sessão retorna 401. O cadastro aceita as 27 UFs e não confirma propriedade, autorização ou cobertura normativa. Organização informada no cadastro de parcela deve coincidir com a sessão.
+
 ## Sessão e escopo
 
 Em `DEMO_MODE=true`, `GET /api/v1/auth/personas` lista pessoas sintéticas e `POST /api/v1/auth/session` recebe `{user_id}`. A resposta define a sessão HTTP-only e retorna `csrf_token`. Escritas autenticadas exigem o cabeçalho `X-CSRF-Token`; a organização vem da sessão. Este mecanismo é exclusivamente demonstrativo.

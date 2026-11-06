@@ -1,5 +1,39 @@
 # Validação das pendências técnicas — 06/11/2026
 
+## Fechamento do entregável solicitado, excluindo rota e normas
+
+Relatório final em [delivery-2026-11-06.md](delivery-2026-11-06.md). Implementadas as vinte tarefas restantes do escopo de produto/entrega: contratos, cadastro, interfaces, fontes, mistura, revisão/venda, pacote, trace/indicadores, seed pela API, integração nacional, recuperação e documentação/imagem. Controle final: 44/47; somente 1.7, 2.6 e 4.5 permanecem abertas por exclusão explícita de rota/normas.
+
+Aceite completo executado: 164 testes unitários, 102 integrados contra PostgreSQL/PostGIS e 36 de navegador passaram. Destino RS foi percorrido no navegador móvel; dados, documentos e cadeia das 27 UFs foram recuperados após reabertura da API/conexão. A imagem Linux compilou e serviu SPA, sessão da própria origem, dashboard e pacote privado em 127.0.0.1:3001. Intervalos de geração usam relógio monotônico após a verificação em contêiner revelar ajuste regressivo do relógio civil; cinco testes integrados de entrega foram repetidos e passaram depois dessa correção.
+
+O backup final de data/backups/2026-11-06T15-41-27-021Z foi restaurado no banco separado foresttrace_restore_1793979727086 com documentos em pasta própria; a verificação de hashes passou na cópia restaurada. Capturas das oito etapas e vídeos do ensaio automatizado estão em test-results/ui-live e test-results/release. Roteiro planejado de 180 segundos entregue; não foi gravada fala humana. Licença MIT conferida, elegibilidade no evento registrada como pendente, macOS nativo não executado e nenhuma aprovação normativa presumida.
+
+## Continuação da persistência com subagentes
+
+Implementadas e integradas as frentes de autenticação, cadastro e custódia. Memberships agora restringem papéis efetivos em cada requisição; revogação afeta sessões existentes, logout exige CSRF e logs não guardam query strings de credenciais. Cadastro/consulta de parcelas e lotes tem escopo organizacional e testes nas 27 UFs, com geometrias/áreas/hash canônico/autoria persistidos. Seed executado com papel de aplicação no banco separado de validação confirmou as organizações/personas demonstrativas.
+
+O serviço de saldos usa Decimal, locks de linha em ordem estável e débito condicionado. Os handlers usam o mesmo append de `services/audit-events.ts` dentro da transação idempotente. Verificados rollback em falha de evento, volume decimal exato, concorrência 6+6 sobre saldo 10, corte 12/10 pendente idempotente, corte fora da vigência, datas invertidas e confirmações separadas. Recebimento 10/9,9 conserva a diferença em quarentena e abre R09; 10/0 não cria crédito. Transformação exige recebimento, persiste 10→3 e rejeita duplicidade/saída sem evento ou consumo repetido. Documentação em `auth-persistence.md`, `custody-persistence.md` e `api-contract.md`.
+
+Migração `202611060005_regulatory_versions` aplicada em `foresttrace`, `foresttrace_test` e `foresttrace_migration_check_20261106`. O enum de cobertura aceita versões imutáveis, contexto/hash/autoria e perfis BR + 27 UFs. Motor/rotas/testes de aplicabilidade por fase/data/produto/modalidade/sistema estão implementados; ausência de perfil, lista vazia, versões inválidas e fontes conflitantes mantêm lacunas. Avaliações anteriores são preservadas e resumos atuais são invalidados por mudanças no contexto/catálogo. Resumo público do passaporte é minimizado e não promove evidência sintética. Perfis confirmados nos testes são isolados, sem valor normativo, e não foram importados do CSV.
+
+Resultados finais: `npm test` passou com 158 testes em 16 arquivos; `npm run test:integration` passou com 65 testes em dez arquivos; `npm run typecheck` e `npm run build` passaram. `npm run docs:openapi` atualizou o contrato exportado. O seed foi verificado no banco separado, sem substituir a verificação completa exigida em 7.1. Não foram executados novos E2E nesta continuação.
+
+Concluídos os critérios de 2.2, 2.4, 3.1, 3.3 e 3.4. A tarefa 2.6 permanece aberta por sua dependência do checklist 1.7 da rota, embora sua parte de software tenha sido implementada e testada. A tarefa 2.3 continua aberta para auditoria completa de validação das respostas. Os subagentes deixaram alterações parciais ao atingir o limite de créditos do workspace; a integração e os testes finais foram concluídos pelo agente principal.
+
+## Banco de dados — verificação posterior com Docker disponível
+
+Nesta continuação, Docker Desktop foi iniciado e `docker compose up -d db` confirmou PostgreSQL/PostGIS em execução. A migração aditiva `202611060004_database_guarantees` foi aplicada em `foresttrace` e `foresttrace_test`. `npm run db:migrate` também aplicou as seis migrações do zero no banco separado `foresttrace_migration_check_20261106`, preservado para inspeção. Nenhum banco foi apagado ou reinicializado.
+
+Adicionados vínculos dos autores da expedição/recebimento, índices de consulta, validação PostGIS de novas geometrias e constraints de percurso, UF, vigência e cobertura normativa. Avaliação CONFIRMADA exige requisitos não vazios e nenhuma lacuna. Perfis normativos, avaliações, parâmetros de conversão e bundles são imutáveis para o papel de aplicação. Passaportes permitem UPDATE apenas na lista de grants; emissão grava conteúdo e checkpoints completos em um INSERT transacional com seu evento. Logs continuam aceitando identificadores desconhecidos de tentativas negadas.
+
+`/health` consultou PostGIS pelo papel de aplicação e retornou 200 no teste HTTP integrado. Testes isolados também verificam 503 quando a dependência falha, sem expor detalhes da conexão. Verificados 119 testes unitários e 44 testes de integração em seis arquivos, incluindo rollback, chave fiscal duplicada, FKs, saldo negativo, disputa de duas reservas de 6 m³ sobre saldo 10, cadeia persistida de 10→3, grants e snapshots protegidos. A primeira tentativa das suítes encontrou contratos compilados desatualizados; os scripts agora os compilam antes dos testes. As contagens históricas abaixo correspondem às rodadas anteriores.
+
+A constraint espacial usa NOT VALID para preservar declarações legadas inválidas, encontradas em fixtures anteriores com polígonos vazios. Ela rejeita novas inserções/atualizações inválidas; não atesta a validade das linhas antigas. Após revisão, o proprietário pode executar `ALTER TABLE plots VALIDATE CONSTRAINT plots_geometry_valid`. Nenhuma geometria foi reparada automaticamente. As fixtures ativas de integração foram corrigidas para polígonos válidos.
+
+Concluídos os critérios de ambiente/banco das tarefas 1.2 e 2.1. A proteção normativa persistida é parte de 2.6; seleção por aplicabilidade, consulta autorizada e checklist AM→SP ainda exigem trabalho e a tarefa permanece aberta. As demais caixas não foram concluídas apenas pela presença de código ou por cobertura parcial da suíte.
+
+Após o ajuste final de emissão do passaporte, `npm run typecheck`, `npm run build` e `git diff --check` passaram. Progresso confirmado pelo OpenSpec: 19/47 concluídas e 28 abertas.
+
 ## Continuação em Windows — base executável
 
 Verificação da tarefa 1.1 nesta máquina com Node 24.18.0 e npm 11.16.0: `npm ci` instalou 306 pacotes a partir do lockfile; `npm run db:generate`, `npm run typecheck` e `npm run build` passaram. Não foram encontrados arquivos vazios em `apps/api/src`, `apps/web/src` ou `packages/contracts/src`. Prisma e Vite precisaram de execução fora da sandbox por bloqueio `spawn EPERM` do esbuild. Nenhuma versão de dependência foi alterada para essa verificação.

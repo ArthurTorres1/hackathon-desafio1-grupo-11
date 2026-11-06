@@ -1,0 +1,16 @@
+const base = new URL(process.argv[2] ?? 'http://localhost:3000');
+if (!['localhost', '127.0.0.1'].includes(base.hostname)) throw new Error('Verificação limitada à aplicação local.');
+const health = await fetch(new URL('/health', base));
+if (!health.ok || (await health.json() as { database?: string }).database !== 'ok') throw new Error('Banco/API indisponível.');
+const page = await fetch(base);
+if (!page.ok || !(await page.text()).includes('id="root"')) throw new Error('Interface compilada indisponível.');
+const session = await fetch(new URL('/api/v1/auth/session', base), { method: 'POST', headers: { 'content-type': 'application/json', origin: base.origin }, body: JSON.stringify({ user_id: '20000000-0000-4000-8000-000000000013' }) });
+if (!session.ok) throw new Error(`Sessão de demo retornou ${session.status}; execute seed:demo.`);
+const cookie = session.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
+const dashboard = await fetch(new URL('/api/v1/dashboard', base), { headers: { cookie } });
+if (!dashboard.ok) throw new Error('Consulta autenticada indisponível.');
+const data = await dashboard.json() as { passports: Array<{ id: string }> };
+if (!data.passports.length) throw new Error('Seed sem passaportes.');
+const bundle = await fetch(new URL(`/api/v1/passports/${data.passports[0]!.id}/bundle`, base), { headers: { cookie } });
+if (!bundle.ok || !(await bundle.text()).includes('MISSING_EVIDENCE')) throw new Error('Pacote demonstrativo indisponível ou sem ressalva.');
+console.log(JSON.stringify({ base_url: base.origin, health: 'ok', compiled_ui: 'ok', same_origin_session: 'ok', authenticated_dashboard: 'ok', demo_bundle: 'MISSING_EVIDENCE' }, null, 2));

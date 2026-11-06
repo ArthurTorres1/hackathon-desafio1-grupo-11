@@ -1,5 +1,7 @@
 # ForestTrace
 
+Entrega local e evidências desta rodada: [relatório do entregável](docs/delivery-2026-11-06.md). A imagem conferida nesta sessão está em http://127.0.0.1:3001.
+
 Passaporte digital de evidências da madeira, da parcela ao produto. Correlaciona documentos, quantidades e sinais geoespaciais e preserva decisões humanas no histórico. Complementa DOF+/Sinaflor; não emite certificação oficial nem declaração DDS.
 
 ## Ambiente local
@@ -31,6 +33,8 @@ npm run dev
 ```
 
 Crie `.env` apenas na primeira instalação; preserve sua configuração depois. As senhas de exemplo são exclusivas do banco local descartável. `DATABASE_URL` usa o papel de aplicação e `DIRECT_URL` usa o proprietário para migrações. Alterar variáveis depois da criação do volume não altera usuários e senhas já existentes.
+
+`/health` consulta PostgreSQL e a extensão PostGIS: retorna 200 quando disponíveis e 503 quando a consulta falha. A migração `202611060004_database_guarantees` reforça autoria, geometrias, UFs, cobertura normativa e proteção de snapshots. Geometrias antigas são preservadas para revisão; novas escritas são validadas no banco. Os testes compilam automaticamente os contratos antes de executar.
 
 - Interface de desenvolvimento: http://localhost:5173
 - API: http://localhost:3000/api/v1
@@ -94,6 +98,10 @@ O autor de uma operação não decide seu próprio alerta. Outro auditor autoriz
 Documentos e backups privados pertencem a `data/private` e `data/backups`, ignorados pelo git. O passaporte público deve omitir CPF, contatos, notas integrais e coordenadas sensíveis. SHA-256 e eventos encadeados detectam alteração em relação aos registros preservados, sem assinatura forte ou garantia contra reescrita por administrador.
 
 ## Contêiner da aplicação
+
+O entregável usa `npm run seed:demo` para criar A, LT-204, mistura 60%/40% e origem desconhecida pelas mesmas operações autenticadas da API. Escolha as personas **Produtor entregável**, **Recebedor entregável** e **Auditor entregável distinto**. O seed pode ser repetido com as mesmas chaves idempotentes. O catálogo normativo continua pendente e todos os exemplos permanecem MISSING_EVIDENCE.
+
+Backups privados: `npm run backup:demo`. Para restaurar sem sobrescrever a aplicação, use `npm run restore:demo -- data/backups/PASTA_DO_BACKUP`. A restauração cria um banco `foresttrace_restore_...` e uma pasta separada de documentos. Os arquivos de backup contêm dados privados e permanecem fora do Git. A imagem usa a pasta local `data/private` para acessar os mesmos documentos produzidos pelo seed; PostgreSQL permanece no volume existente.
 
 Após preparar banco, migrações e demo:
 

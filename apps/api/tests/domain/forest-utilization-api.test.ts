@@ -2,8 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { createHash } from 'node:crypto';
 import { Value } from '@sinclair/typebox/value';
 import { ForestUtilizationResponseSchema } from '@foresttrace/contracts';
-const mocks = vi.hoisted(() => ({ session: vi.fn(), log: vi.fn(), transaction: vi.fn() }));
-vi.mock('../../src/db.js', () => ({ prisma: { session: { findUnique: mocks.session }, accessLog: { create: mocks.log }, $transaction: mocks.transaction } }));
+const mocks = vi.hoisted(() => ({ session: vi.fn(), log: vi.fn(), transaction: vi.fn(), memberships: vi.fn() }));
+vi.mock('../../src/db.js', () => ({ prisma: { session: { findUnique: mocks.session }, membership: { findMany: mocks.memberships }, accessLog: { create: mocks.log }, $transaction: mocks.transaction } }));
 import { buildServer } from '../../src/app.js';
 import * as calculator from '../../src/services/forest-utilization.js';
 
@@ -16,6 +16,7 @@ beforeAll(async () => { app = await buildServer(); });
 afterAll(async () => { await app?.close(); });
 beforeEach(() => {
   roles = ['OPERATOR'];
+  mocks.memberships.mockReset().mockImplementation(async () => roles.map(role => ({ user_id: 'test-user', organization_id: 'test-org', role })));
   mocks.log.mockReset().mockResolvedValue({});
   mocks.transaction.mockReset().mockImplementation(() => { throw new Error('Cálculo não pode persistir operações.'); });
   mocks.session.mockReset().mockImplementation(async () => ({ user_id: 'test-user', expires_at: new Date(Date.now() + 60_000), csrf_hash: createHash('sha256').update('test-csrf').digest('hex'), user: { id: 'test-user', organization_id: 'test-org', roles } }));

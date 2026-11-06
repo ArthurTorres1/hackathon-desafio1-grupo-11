@@ -1,5 +1,7 @@
 # Arquitetura do ForestTrace
 
+Os indicadores do trace são calculados nos registros persistidos: `tracked_fraction = known_volume_m3 / total_volume_m3`, com origem desconhecida explícita em `unknown_volume_m3`; numerador e denominador são expostos como strings decimais. Para 1,8 m³ conhecidos e 1,2 m³ desconhecidos numa saída de 3 m³, a cobertura é 60%, mantendo os 40% restantes como lacuna. Em mistura 1,8/1,2 com ambas as parcelas conhecidas, as participações são 60%/40% e a cobertura conhecida é 100%. `generated_at` e `duration_ms` registram a geração do trace; a duração não representa economia de tempo medida. Contagens de checagens exibem seu denominador e não medem impacto ambiental ou redução de fraude.
+
 O ForestTrace é um monólito modular TypeScript. Fastify publica a API e o build React; PostgreSQL/PostGIS persiste a cadeia e executa as verificações espaciais. Contratos TypeBox são compartilhados pelo workspace e alimentam o contrato HTTP.
 
 Chamadas de IA passam exclusivamente pelo adaptador TypeScript `services/codex-cli.ts`, que executa o Codex CLI no host local. A integração preserva as regras determinísticas e produz sugestões revisáveis. O comando `npm run demo:ai` demonstra essa fronteira; configuração e limites estão em [codex-cli.md](codex-cli.md).

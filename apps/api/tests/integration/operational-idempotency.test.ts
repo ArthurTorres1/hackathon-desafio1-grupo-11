@@ -11,8 +11,9 @@ let headers: { cookie: string; 'x-csrf-token': string };
 beforeAll(async () => {
   await owner.organization.create({ data: { id: organizationId, name: 'Idempotency HTTP test', role: 'OPERATOR', state: 'AM', municipality: 'Teste', data_provenance: { label: 'TEST' } } });
   await owner.user.create({ data: { id: userId, name: 'Operator', organization_id: organizationId, roles: ['OPERATOR'] } });
+  await owner.membership.create({ data: { user_id: userId, organization_id: organizationId, role: 'OPERATOR' } });
   await owner.organization.create({ data: { id: recipientId, name: 'Idempotency recipient', role: 'PROCESSOR', state: 'SP', municipality: 'Teste', data_provenance: { label: 'SIMULADA' } } });
-  await owner.plot.create({ data: { id: plotId, organization_id: organizationId, state: 'AM', municipality: 'Teste', declared_property: 'Sintética', geometry: { type: 'Polygon', coordinates: [] }, geometry_hash: 'test', geometry_date: new Date('2026-11-05'), area_ha: '1', data_provenance: {}, created_by_user_id: userId } });
+  await owner.plot.create({ data: { id: plotId, organization_id: organizationId, state: 'AM', municipality: 'Teste', declared_property: 'Sintética', geometry: { type: 'Polygon', coordinates: [[[-60,-3],[-59.999,-3],[-59.999,-2.999],[-60,-2.999],[-60,-3]]] }, geometry_hash: 'test', geometry_date: new Date('2026-11-05'), area_ha: '1', data_provenance: {}, created_by_user_id: userId } });
   await owner.originLot.create({ data: { id: lotId, code: `IDEMP-${randomUUID()}`, organization_id: organizationId, plot_id: plotId, species_common: 'angelim', species_scientific: 'Dinizia excelsa', authorized_volume_m3: '10', valid_from: new Date('2026-01-01'), valid_until: new Date('2027-12-31'), right_of_use: 'SIMULADO', data_provenance: { label: 'SIMULADA' }, created_by_user_id: userId } });
   await owner.balance.create({ data: { lot_id: lotId, organization_id: organizationId, available_m3: '10' } });
   app = await buildServer();
@@ -33,6 +34,7 @@ afterAll(async () => {
   await owner.plot.deleteMany({ where: { organization_id: organizationId } });
   await owner.idempotencyKey.deleteMany({ where: { user_id: userId } });
   await owner.session.deleteMany({ where: { user_id: userId } });
+  await owner.membership.deleteMany({ where: { user_id: userId } });
   await owner.user.delete({ where: { id: userId } });
   await owner.organization.delete({ where: { id: organizationId } });
   await owner.organization.delete({ where: { id: recipientId } });
